@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/PlayerController.h"
+#include "OnlineSubsystemUtils.h"
 
 
 // Game Includes
@@ -36,6 +37,12 @@
 
 bool UTMainMenu::BindSessionSubsystemEvents()
 {
+	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
+	if (GEngine && OnlineSub && OnlineSub->GetSubsystemName() == "NULL")
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::White, TEXT("Using NULL OnlineSubsystem"));
+	}
+
 	UGameInstance* GameInstance = GetGameInstance();
 	if (!GameInstance) return false;
 
@@ -221,7 +228,6 @@ void UTMainMenu::OnPlayerCountSliderValueChange(float Value)
 	if (PlayerCountText)
 	{
 		PlayerCountText->SetText(FText::FromString(FString::FromInt(SliderIntValue)));
-		
 	}
 }
 
