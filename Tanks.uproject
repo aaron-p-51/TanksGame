@@ -1,0 +1,42 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "4.25",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "Tanks",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"PhysXVehicles",
+				"Engine",
+				"UMG",
+				"AIModule",
+				"VehicleAIPlugin",
+				"TMWEventAggregator"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true
+		},
+		{
+			"Name": "VehicleAIPlugin",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/3e91417b48bb4b5f9d2c3eb0823f1233"
+		},
+		{
+			"Name": "TMWEventAggregator",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/fa03f9aaed6843bfacdacaade161b45e"
+		},
+		{
+			"Name": "DataTrackerPlugin",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/44935228baad48ee9fd9179c9a32623b"
+		}
+	]
+}
