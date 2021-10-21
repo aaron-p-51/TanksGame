@@ -11,6 +11,7 @@
 
 class UWidgetSwitcher;
 class UTErrorAckWidget;
+class UTInfoDialogWidget;
 
 /**
  * 
@@ -28,6 +29,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ErrorAck")
 	TSubclassOf<UTErrorAckWidget> ErrorAckWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DialogWidget")
+	TSubclassOf<UTInfoDialogWidget> InfoDialogWidgetClass;
+
+	UPROPERTY()
+	UTInfoDialogWidget* CurrentDialogWidget;
 
 	/** SessionSubsystem. Implements Session Interface to handle managing multilayer sessions  */
 	UTSessionSubsystem* SessionSubsystem;
@@ -75,7 +82,14 @@ protected:
 	 * Create and display UTErrorAckWidget. This widget child widgets will be be disabled when UTErrorAckWidget is visible on viewport.
 	 */
 	UFUNCTION(BlueprintCallable)
-	virtual void CreateErrorAckWidget(const FString& ErrorTitle, const FString& ErrorDetails);
+	void CreateErrorAckWidget(const FString& ErrorTitle, const FString& ErrorDetails);
+
+	UFUNCTION(BlueprintCallable)
+	void CreateInfoDialogWidget(const FString& DialogTitle, const FString& DialogDetails);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveCurrentInfoDialogWidget();
+
 
 
 

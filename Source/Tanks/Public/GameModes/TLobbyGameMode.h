@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameStates/TLobbyGameState.h"
 #include "GameFramework/GameMode.h"
 #include "TLobbyGameMode.generated.h"
+
+
 
 /**
  * 
@@ -33,6 +36,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lobby")
 	float WaitTimeAfterIsReadyToStart;
 
+	UPROPERTY()
+	int32 PlayerCount;
+
+
+
 /**
  * Methods
  */
@@ -41,6 +49,10 @@ private:
 
 	/** Init TimerHandle_DefaultTick */
 	virtual void PreInitializeComponents() override;
+
+	int32 GetSessionMaxPlayers() const;
+	FString GetSessionServerName() const;
+	int32 GetSessionCurrentPlayers() const;
 
 protected:
 
@@ -68,5 +80,10 @@ protected:
 public:
 
 	ATLobbyGameMode();
+
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	virtual void Logout(AController* Exiting) override;
+
 	
 };

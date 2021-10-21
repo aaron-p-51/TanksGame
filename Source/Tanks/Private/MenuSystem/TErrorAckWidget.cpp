@@ -9,22 +9,13 @@
 
 
 
-void UTErrorAckWidget::Configure(UUserWidget* ErrorSpawningWidget, bool DisableInputToSpawningParent, const FText& ErrorTitle, const FText& ErrorDetails, EInputModeOnClose InputModeOnClose)
+void UTErrorAckWidget::Configure(UUserWidget* DialogSpawningWidget, bool DisableInputToSpawningParent, EInputModeOnClose InputModeOnClose, const FText& DialogTitleText, const FText& DialogDetailsText)
 {
+	Super::Configure(DialogSpawningWidget, DisableInputToSpawningParent, InputModeOnClose, DialogTitleText, DialogDetailsText);
+
 	bIsFocusable = true;
 	BindWidgetEvents();
 	SetUIInputMode();
-	SetTitleErrorText(ErrorTitle);
-	SetErrorDetailsText(ErrorDetails);
-	InputModeOnWidgetClose = InputModeOnClose;
-
-	SpawningWidget = ErrorSpawningWidget;
-	if (SpawningWidget && DisableInputToSpawningParent)
-	{
-		SpawningWidget->SetIsEnabled(false);
-	}
-
-	this->AddToViewport();
 }
 
 
@@ -42,7 +33,9 @@ bool UTErrorAckWidget::BindWidgetEvents()
 
 void UTErrorAckWidget::OnCloseButtonClick()
 {
-	if (InputModeOnWidgetClose == EInputModeOnClose::EIMOC_GameOnly)
+
+	RemoveWidget();
+	/*if (InputModeOnWidgetClose == EInputModeOnClose::EIMOC_GameOnly)
 	{
 		SetGameInputMode();
 	}
@@ -52,57 +45,10 @@ void UTErrorAckWidget::OnCloseButtonClick()
 		SpawningWidget->SetIsEnabled(true);
 	}
 
-	this->RemoveFromViewport();
+	this->RemoveFromViewport();*/
 }
 
 
-void UTErrorAckWidget::SetUIInputMode()
-{
-	// Set the PlayerController input mode to interact with menu
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (PlayerController)
-	{
-		// Set player control to UI input mode. Display mouse cursor.
-		FInputModeUIOnly InputMode;
-		InputMode.SetWidgetToFocus(this->TakeWidget());
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 
-		PlayerController->SetInputMode(InputMode);
-		PlayerController->bShowMouseCursor = true;
-	}
-}
-
-
-void UTErrorAckWidget::SetGameInputMode()
-{
-	// Set PlayerController input mode to interact with game
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (PlayerController)
-	{
-		// Set player control to Game input mode. Hide mouse cursor.
-		FInputModeGameOnly InputMode;
-		PlayerController->SetInputMode(InputMode);
-
-		PlayerController->bShowMouseCursor = false;
-	}
-}
-
-
-void UTErrorAckWidget::SetTitleErrorText(const FText& Text)
-{
-	if (TitleErrorText)
-	{
-		TitleErrorText->SetText(Text);
-	}
-}
-
-
-void UTErrorAckWidget::SetErrorDetailsText(const FText& Text)
-{
-	if (ErrorDetailsText)
-	{
-		ErrorDetailsText->SetText(Text);
-	}
-}
 
 

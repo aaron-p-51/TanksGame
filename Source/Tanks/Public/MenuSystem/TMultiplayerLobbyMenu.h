@@ -13,6 +13,7 @@ class UWidgetSwitcher;
 class UButton;
 class UVerticalBox;
 class UTPlayerInLobby;
+class USizeBox;
 class UTSessionSubsystem;
 
 /**
@@ -36,8 +37,13 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UTPlayerInLobby> PlayerInLobbyWidgetClass;
-	
 
+	UPROPERTY(EditDefaultsOnly, Category = "Data Update")
+	float UpdateLobbyDataRate = 0.5f;
+
+	FTimerHandle TimerHandler_UpdateLobbyData;
+
+	
 	/**************************************************************************/
 	/* Widgets */
 	/**************************************************************************/
@@ -50,6 +56,15 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* MaxPlayersText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UTextBlock* MatchStartText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	USizeBox* NextMapBox;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	USizeBox* VoteToStartBox;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* MatchStartTimeText;
@@ -88,8 +103,8 @@ protected:
 	UVerticalBox* PlayersBox;
 
 
-
-	
+	UPROPERTY()
+	TMap<APlayerState*, UTPlayerInLobby*> PlayerInLobbyMap;
 
 
 
@@ -99,7 +114,7 @@ protected:
 
 protected:
 
-	//virtual bool Initialize() override;
+	virtual bool Initialize() override;
 
 	/** Bind widget events for widgets members above */
 	virtual bool BindWidgetEvents() override;
@@ -147,14 +162,19 @@ protected:
 
 	void UpdatePlayersInLobbyCount(const int32 CurrentPlayers, const int32 MaxPlayers);
 
+	UFUNCTION()
+	void UpdateLobbyData();
+
+	void InitWidgetProperties();
+	
+
 
  public:
 	
-	UFUNCTION(BlueprintCallable)
-	void UpdateLobbyDataNew();
 
-	UFUNCTION(BlueprintCallable, Category = "Menu")
-	FString GetTotalPlayers();
+
+	//UFUNCTION(BlueprintCallable, Category = "Menu")
+	//FString GetTotalPlayers();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void UpdatePlayerList();

@@ -21,6 +21,9 @@ struct FLobbyData
 	uint8 VotesToStart;
 
 	UPROPERTY(BlueprintReadOnly)
+	uint8 VotesNeededToStart;
+
+	UPROPERTY(BlueprintReadOnly)
 	FString ServerName;
 
 	UPROPERTY(BlueprintReadOnly)

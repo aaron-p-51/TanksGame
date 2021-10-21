@@ -9,31 +9,18 @@
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Slider.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "GameFramework/PlayerController.h"
 #include "OnlineSubsystemUtils.h"
 
 
 // Game Includes
-#include "..\Public\MenuSystem\TServerRow.h"
+//#include "..\Public\MenuSystem\TServerRow.h"
+#include "MenuSystem/TServerRow.h"
+#include "MenuSystem/TErrorAckWidget.h"
 #include "Subsystems/TSessionSubsystem.h"
-#include "MenuSystem\TErrorAckWidget.h"
 
-
-//bool UTMainMenu::Initialize()
-//{
-//	bool Success = Super::Initialize();
-//	if (Success)
-//	{
-//		bIsFocusable = true;
-//		Setup();
-//		BindSessionSubsystemEvents();
-//		Success = BindWidgetEvents();
-//	}
-//
-//	return Success;
-//}
 
 bool UTMainMenu::BindSessionSubsystemEvents()
 {
@@ -183,6 +170,7 @@ void UTMainMenu::OnMultiplayerHostButtonClick()
 void UTMainMenu::OnMultiplayerJoinButtonClick()
 {
 	SwitchSubmenu(MainMenuWidgetSwitcher, MultiplayerJoinSubmenu);
+	SearchForSessionsToJoin();
 }
 
 
@@ -283,6 +271,8 @@ void UTMainMenu::OnFindSessionComplete(const TArray<FOnlineSessionSearchResult>&
 	{
 		CreateErrorAckWidget(FString("Error Finding Sessions"), FString(""));
 	}
+
+	RemoveCurrentInfoDialogWidget();
 }
 
 
@@ -388,7 +378,7 @@ void UTMainMenu::UpdateJoinServerList()
 			UTServerRow* Row = Cast<UTServerRow>(ServerListScrollBox->GetChildAt(i));
 			if (Row)
 			{
-				Row->bIsSelected = (SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i);
+				Row->SetIsSelected((SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i));
 			}
 		}
 	}
@@ -424,6 +414,7 @@ void UTMainMenu::SearchForSessionsToJoin()
 	if (SessionSubsystem)
 	{
 		SessionSubsystem->FindSessions(100, true);
+		CreateInfoDialogWidget(FString(TEXT("Searching for servers")), FString());
 	}
 }
 
@@ -465,17 +456,17 @@ void UTMainMenu::SetSelectedServerRowIndex(uint32 Index)
 }
 
 
-void UTMainMenu::UpdateServerListScrollBox()
-{
-	if (!ServerListScrollBox) return;
-
-	for (int32 i = 0; i < ServerListScrollBox->GetChildrenCount(); ++i)
-	{
-		auto Row = Cast<UTServerRow>(ServerListScrollBox->GetChildAt(i));
-		if (Row)
-		{
-			Row->bIsSelected = (SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i);
-		}
-	}
-}
+//void UTMainMenu::UpdateServerListScrollBox()
+//{
+//	if (!ServerListScrollBox) return;
+//
+//	for (int32 i = 0; i < ServerListScrollBox->GetChildrenCount(); ++i)
+//	{
+//		auto Row = Cast<UTServerRow>(ServerListScrollBox->GetChildAt(i));
+//		if (Row)
+//		{
+//			Row->SetIsSelected((SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i));
+//		}
+//	}
+//}
 

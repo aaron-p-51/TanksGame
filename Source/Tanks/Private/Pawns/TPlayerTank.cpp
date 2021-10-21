@@ -765,6 +765,9 @@ void ATPlayerTank::SwitchToPreviousWeapon()
 	{
 		const int32 CurrentWeaponIndex = WeaponInventory.IndexOfByKey(CurrentWeapon);
 		const int32 NextWeaponIndex = (CurrentWeaponIndex - 1) % WeaponInventory.Num();
+
+		// TODO: Index can be out of range, causes crash occasionally. 
+		if (NextWeaponIndex >= WeaponInventory.Num()) return;
 		ATShootableWeapon* NextWeapon = WeaponInventory[NextWeaponIndex];
 
 		if (!NextWeapon) return;

@@ -12,6 +12,7 @@ ATLobbyGameState::ATLobbyGameState()
 	LobbyData.MaxPlayers = 0;
 	LobbyData.CurrentPlayers = 0;
 	LobbyData.VotesToStart = 0;
+	LobbyData.VotesNeededToStart = 0;
 	LobbyData.ServerName = "Server";
 	LobbyData.bIsMatchStarting = false;
 	LobbyData.TimeTillMatchStart = 0.f;
@@ -31,6 +32,7 @@ void ATLobbyGameState::SetLobbyData(FLobbyData Data)
 		LobbyData.MaxPlayers = Data.MaxPlayers;
 		LobbyData.CurrentPlayers = Data.CurrentPlayers;
 		LobbyData.VotesToStart = Data.VotesToStart;
+		LobbyData.VotesNeededToStart = Data.VotesNeededToStart;
 		LobbyData.ServerName = Data.ServerName;
 		LobbyData.bIsMatchStarting = Data.bIsMatchStarting;
 		LobbyData.TimeTillMatchStart = Data.TimeTillMatchStart;

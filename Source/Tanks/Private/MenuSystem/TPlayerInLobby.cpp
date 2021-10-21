@@ -13,3 +13,13 @@ void UTPlayerInLobby::SetPlayerName(FText PlayerName)
 		PlayerNameText->SetText(PlayerName);
 	}
 }
+
+FText UTPlayerInLobby::GetPlayerName() const
+{
+	if (PlayerNameText)
+	{
+		return PlayerNameText->GetText();
+	}
+
+	return FText();
+}

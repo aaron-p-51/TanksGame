@@ -35,6 +35,10 @@ protected:
 	/** Session search results this server row represents */
 	FOnlineSessionSearchResult ServerRowSearchResults;
 
+	/* Specify if this ServerRow is selected in MainMenu*/
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsSelected = false;
+
 	/**************************************************************************/
 	/* Widgets */
 	/**************************************************************************/
@@ -72,11 +76,8 @@ protected:
 	FSlateColor DefaultTextColor;
 
 
-public:
 
-	/* Specify if this ServerRow is selected in MainMenu*/
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsSelected = false;
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsHeader = false;
@@ -91,6 +92,7 @@ public:
 	void SetServerNameText(FText Text);
 	void SetServerHostUserName(FText Text);
 	void SetServerPlayersText(uint16 CurrentPlayers, uint16 MaxPlayers);
+	void SetIsSelected(bool Selected);
 
 	/**
 	 * Setup ServerRow, will populate widget text field based on Results.

@@ -5,8 +5,12 @@
 
 // Engine Includes
 #include "Components/WidgetSwitcher.h"
-#include "MenuSystem/TErrorAckWidget.h"
+
 #include "Blueprint/WidgetBlueprintLibrary.h"
+
+// Game Includes
+#include "MenuSystem/TInfoDialogWidget.h"
+#include "MenuSystem/TErrorAckWidget.h"
 
 
 
@@ -21,6 +25,8 @@ bool UTMenuWidgetBase::Initialize()
 	Setup();
 	if (!BindSessionSubsystemEvents()) return false;
 	if (!BindWidgetEvents()) return false;
+
+	CurrentDialogWidget = nullptr;
 
 	return true;
 }
@@ -101,7 +107,6 @@ void UTMenuWidgetBase::CreateErrorAckWidget(const FString& ErrorTitle, const FSt
 		}
 	}
 
-	// If unable to find a UTErrorAckWidget create a new one 
 	if (!ErrorAckWidget)
 	{
 		ErrorAckWidget = CreateWidget<UTErrorAckWidget>(GetWorld(), ErrorAckWidgetClass);
@@ -109,6 +114,48 @@ void UTMenuWidgetBase::CreateErrorAckWidget(const FString& ErrorTitle, const FSt
 
 	if (ErrorAckWidget)
 	{
-		ErrorAckWidget->Configure(this, true, FText::FromString(ErrorTitle), FText::FromString(ErrorDetails), EInputModeOnClose::EIMOC_UIOnly);
-	}
+		ErrorAckWidget->Configure(this, true, EInputModeOnClose::EIMOC_UIOnly, FText::FromString(ErrorTitle), FText::FromString(ErrorDetails));
+	}	
 }
+
+
+void UTMenuWidgetBase::CreateInfoDialogWidget(const FString& DialogTitle, const FString& DialogDetails)
+{
+	if (!InfoDialogWidgetClass) return;
+
+	TArray<UUserWidget*> FoundWidgets;
+	UTInfoDialogWidget* InfoDailogWidget = nullptr;
+
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, InfoDialogWidgetClass, false);
+	for (auto& Widget : FoundWidgets)
+	{
+		InfoDailogWidget = Cast<UTInfoDialogWidget>(Widget);
+		if (InfoDailogWidget != nullptr)
+		{
+			break;
+		}
+	}
+
+	if (!InfoDailogWidget)
+	{
+		InfoDailogWidget = CreateWidget<UTInfoDialogWidget>(GetWorld(), InfoDialogWidgetClass);
+		
+	}
+
+	if (InfoDailogWidget)
+	{
+		InfoDailogWidget->Configure(this, true, EInputModeOnClose::EIMOC_UIOnly, FText::FromString(DialogTitle), FText::FromString(DialogDetails));
+	}
+
+	CurrentDialogWidget = InfoDailogWidget;
+}
+
+void UTMenuWidgetBase::RemoveCurrentInfoDialogWidget()
+{
+	if (!CurrentDialogWidget) return;
+
+	CurrentDialogWidget->RemoveWidget();
+	CurrentDialogWidget = nullptr;
+}
+
+

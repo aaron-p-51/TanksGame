@@ -37,5 +37,7 @@ public:
 
 	void SetPlayerName(FText PlayerName);
 
+	FText GetPlayerName() const;
+
 
 };

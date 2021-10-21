@@ -3,22 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
-#include "TInGameMenu.generated.h"
+#include "TDialogBaseWidget.h"
+#include "TInfoDialogWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TANKS_API UTInGameMenu : public UUserWidget
+class TANKS_API UTInfoDialogWidget : public UTDialogBaseWidget
 {
 	GENERATED_BODY()
 
 /**
- * Methods
+ * Members
  */
-protected:
 
 
-
+	
 };

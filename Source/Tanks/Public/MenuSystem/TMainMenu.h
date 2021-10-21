@@ -242,9 +242,9 @@ protected:
 
 	void UpdateJoinServerList();
 
-	/** Update ServerListScrollBox when the user selects a session in ServerListScrollBox  */
-	UFUNCTION(BlueprintCallable)
-	void UpdateServerListScrollBox();
+	///** Update ServerListScrollBox when the user selects a session in ServerListScrollBox  */
+	//UFUNCTION(BlueprintCallable)
+	//void UpdateServerListScrollBox();
 
 	/** Search for a new session to join. This function can be modified to allow specific specific search parameters */
 	UFUNCTION(BlueprintCallable)

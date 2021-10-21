@@ -5,39 +5,58 @@
 
 
 // Engine Includes
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/WidgetSwitcher.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
-
 
 
 // Game Includes
-#include "GameStates/TTanksLobbyGameState.h"
 #include "Player/TLobbyPlayerController.h"
 #include "Player/TLobbyPlayerState.h"
 #include "GameStates/TLobbyGameState.h"
 #include "MenuSystem/TPlayerInLobby.h"
 #include "Subsystems/TSessionSubsystem.h"
 
+bool UTMultiplayerLobbyMenu::Initialize()
+{
+	bool Success = Super::Initialize();
 
-//bool UTMultiplayerLobbyMenu::Initialize()
-//{
-//	bool Success = Super::Initialize();
-//	if (Success)
-//	{
-//		bIsFocusable = true;
-//		Setup();
-//		BindSessionSubsystemEvents();
-//		Success = BindWidgetEvents();
-//	}
-//
-//	return Success;
-//}
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().SetTimer(TimerHandler_UpdateLobbyData, this, &UTMultiplayerLobbyMenu::UpdateLobbyData, UpdateLobbyDataRate, true);
+	}
+
+	InitWidgetProperties();
+
+
+	return Success;
+}
+
+
+void UTMultiplayerLobbyMenu::InitWidgetProperties()
+{
+	if (VoteToStartBox)
+	{
+		VoteToStartBox->SetVisibility(ESlateVisibility::Hidden);
+	}
+
+	if (MatchStartText)
+	{
+		MatchStartText->SetText(FText::FromString(TEXT("Waiting for players")));
+	}
+
+	if (ServerNameText)
+	{
+		ServerNameText->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
 
 
 bool UTMultiplayerLobbyMenu::BindSessionSubsystemEvents()
@@ -66,36 +85,36 @@ bool UTMultiplayerLobbyMenu::BindWidgetEvents()
 	if (!CancelQuitButton) return false;
 	CancelQuitButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnCancelQuitButtonClick);
 
+	UE_LOG(LogTemp, Warning, TEXT("LobbyWidget, BindWidgetEvents()"));
+
 	return true;
 }
 
 
-
-
-void UTMultiplayerLobbyMenu::UpdateLobbyDataNew()
+void UTMultiplayerLobbyMenu::UpdateLobbyData()
 {
 	if (!LobbyGameState)
 	{
 		LobbyGameState = GetLobbyGameState();
+		return;
 	}
-
-	if (!LobbyGameState) return;
 
 	FLobbyData LobbyData = LobbyGameState->GetLobbyData();
-	if (LobbyData.bIsMatchStarting)
-	{
-		UpdateTimeTillMatchStart(FMath::FloorToInt(LobbyData.TimeTillMatchStart));
-	}
 
 	UpdateServerName(LobbyData.ServerName);
-	UpdateVotesToStartText(LobbyData.VotesToStart, FMath::FloorLog2(LobbyData.CurrentPlayers / 2.f));
+	UpdateVotesToStartText(LobbyData.VotesToStart, LobbyData.VotesNeededToStart);
 	UpdatePlayersInLobbyCount(LobbyData.CurrentPlayers, LobbyData.MaxPlayers);
 	UpdatePlayersInLobby(LobbyGameState);
 
+	if (LobbyData.bIsMatchStarting)
+	{
+		UpdateTimeTillMatchStart(FMath::FloorToInt(LobbyData.TimeTillMatchStart));
+		if (LobbyData.TimeTillMatchStart <= 0.f)
+		{
+			TearDown();
+		}
+	}
 }
-
-
-
 
 
 ATLobbyGameState* UTMultiplayerLobbyMenu::GetLobbyGameState() const
@@ -109,6 +128,11 @@ ATLobbyGameState* UTMultiplayerLobbyMenu::GetLobbyGameState() const
 
 void UTMultiplayerLobbyMenu::UpdateVotesToStartText(int32 Votes, int32 VotesNeeded)
 {
+	if (VoteToStartBox)
+	{
+		VoteToStartBox->SetVisibility(ESlateVisibility::Visible);
+	}
+
 	if (CurrentVotesToStartText)
 	{
 		CurrentVotesToStartText->SetText(FText::FromString(FString::FromInt(Votes)));
@@ -116,7 +140,7 @@ void UTMultiplayerLobbyMenu::UpdateVotesToStartText(int32 Votes, int32 VotesNeed
 
 	if (NeededVotesToStartText)
 	{
-		CurrentVotesToStartText->SetText(FText::FromString(FString::FromInt(VotesNeeded)));
+		NeededVotesToStartText->SetText(FText::FromString(FString::FromInt(VotesNeeded)));
 	}
 }
 
@@ -124,6 +148,8 @@ void UTMultiplayerLobbyMenu::UpdateVotesToStartText(int32 Votes, int32 VotesNeed
 void UTMultiplayerLobbyMenu::UpdateServerName(const FString& ServerName)
 {
 	if (!ServerNameText) return;
+
+	ServerNameText->SetVisibility(ESlateVisibility::Visible);
 
 	FString ServerNameUpper = ServerName.ToUpper();
 
@@ -141,18 +167,29 @@ void UTMultiplayerLobbyMenu::UpdateServerName(const FString& ServerName)
 
 void UTMultiplayerLobbyMenu::UpdateTimeTillMatchStart(int32 SecondsTillMatchStart)
 {
-	if (!MatchStartTimeText) return;
-
-	MatchStartTimeText->SetVisibility(ESlateVisibility::Visible);
-
-	FText SecondsTimeText = FText::FromString(FString::FromInt(0));
-
-	if (SecondsTillMatchStart > 0)
+	if (NextMapBox)
 	{
-		SecondsTimeText = FText::FromString(FString::FromInt(SecondsTillMatchStart));
+		NextMapBox->SetVisibility(ESlateVisibility::Visible);
 	}
 
-	MatchStartTimeText->SetText(SecondsTimeText);
+	if (MatchStartText)
+	{
+		MatchStartText->SetVisibility(ESlateVisibility::Visible);
+		MatchStartText->SetText(FText::FromString(TEXT("Next map starting in")));
+	}
+
+	if (MatchStartTimeText)
+	{
+		MatchStartTimeText->SetVisibility(ESlateVisibility::Visible);
+
+		FText SecondsTimeText = FText::FromString(FString::FromInt(0));
+		if (SecondsTillMatchStart > 0)
+		{
+			SecondsTimeText = FText::FromString(FString::FromInt(SecondsTillMatchStart));
+		}
+
+		MatchStartTimeText->SetText(SecondsTimeText);
+	}
 }
 
 
@@ -160,37 +197,40 @@ void UTMultiplayerLobbyMenu::UpdatePlayersInLobby(ATLobbyGameState* GameState)
 {
 	if (!PlayersBox || !GameState) return;
 
-	PlayersBox->ClearChildren();
-
-	for (const auto& Player : LobbyGameState->PlayerArray)
+	for (auto Player : LobbyGameState->PlayerArray)
 	{
-		UTPlayerInLobby* PlayerInLobbyWidget = CreateWidget<UTPlayerInLobby>(GetWorld(), PlayerInLobbyWidgetClass);
-		if (PlayerInLobbyWidget)
+		if (!PlayerInLobbyMap.Find(Player))
 		{
-			PlayerInLobbyWidget->SetPlayerName(FText::FromString(Player->GetPlayerName()));
+			UTPlayerInLobby* PlayerInLobbyWidget = CreateWidget<UTPlayerInLobby>(GetWorld(), PlayerInLobbyWidgetClass);
+			if (PlayerInLobbyWidget)
+			{
+				PlayerInLobbyWidget->SetPlayerName(FText::FromString(Player->GetPlayerName()));
+				PlayerInLobbyMap.Add(Player, PlayerInLobbyWidget);
+				PlayersBox->AddChildToVerticalBox(PlayerInLobbyWidget);
+			}
 		}
 	}
 
-	//////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////
+	////
+	//// Debug
+	////
+	/////////////////////////////////////////////////////////
+
+	//TArray<UUserWidget*> FoundWidgets;
+
+	//UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, PlayerInLobbyWidgetClass, false);
 	//
-	// Debug
-	//
-	///////////////////////////////////////////////////////
+	//int32 FoundWidgetCount = 0;
+	//for (auto& Widget : FoundWidgets)
+	//{
+	//	if (Cast<UTPlayerInLobby>(Widget) != nullptr)
+	//	{
+	//		++FoundWidgetCount;
+	//	}
+	//}
 
-	TArray<UUserWidget*> FoundWidgets;
-
-	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, PlayerInLobbyWidgetClass, false);
-	
-	int32 FoundWidgetCount = 0;
-	for (auto& Widget : FoundWidgets)
-	{
-		if (Cast<UTPlayerInLobby>(Widget) != nullptr)
-		{
-			++FoundWidgetCount;
-		}
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Found %d widgets of type PlayerInLobbyWidgetClass"), FoundWidgetCount);
+	//UE_LOG(LogTemp, Warning, TEXT("Found %d widgets of type PlayerInLobbyWidgetClass"), FoundWidgetCount);
 }
 
 
@@ -205,25 +245,6 @@ void UTMultiplayerLobbyMenu::UpdatePlayersInLobbyCount(const int32 CurrentPlayer
 	{
 		MaxPlayersText->SetText(FText::FromString(FString::FromInt(MaxPlayers)));
 	}
-}
-
-
-FString UTMultiplayerLobbyMenu::GetTotalPlayers()
-{
-	///*if (MultiplayerLobbyGameState == nullptr)
-	//{
-	//	GetGameState();
-	//}*/
-
-	//int32 PlayerCount = 0;
-	//if (MultiplayerLobbyGameState)
-	//{
-	//	PlayerCount = MultiplayerLobbyGameState->PlayerArray.Num();
-	//}
-	//
-	//return FString::Printf(TEXT("%d"), PlayerCount);
-
-	return "";
 }
 
 

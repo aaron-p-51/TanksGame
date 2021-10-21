@@ -86,6 +86,16 @@ void UTServerRow::SetServerPlayersText(uint16 CurrentPlayers, uint16 MaxPlayers)
 }
 
 
+void UTServerRow::SetIsSelected(bool Selected)
+{
+	bIsSelected = Selected;
+
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(DefaultTextColor);
+	}
+}
+
 void UTServerRow::ServerRowSelectButtonClicked()
 {
 	if (MainMenuWidget)
@@ -99,27 +109,36 @@ void UTServerRow::ServerRowSelectButtonClicked()
 
 void UTServerRow::ServerRowSelectButtonHovered()
 {
-	SetServerRowTextColor(HoveredTextColor);
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(HoveredTextColor);
+	}
 }
 
 
 void UTServerRow::ServerRowSelectButtonUnhovered()
 {
-	SetServerRowTextColor(DefaultTextColor);
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(DefaultTextColor);
+	}
 }
 
 
 void UTServerRow::SetServerRowTextColor(FSlateColor Color)
 {
-	if (ServerRowSelectButton)
+	if (ServerRowName)
 	{
-		for (auto& Child : ServerRowSelectButton->GetAllChildren())
-		{
-			auto TextChild = Cast<UTextBlock>(Child);
-			if (TextChild)
-			{
-				TextChild->SetColorAndOpacity(Color);
-			}
-		}
+		ServerRowName->SetColorAndOpacity(Color);
+	}
+
+	if (ServerRowHost)
+	{
+		ServerRowHost->SetColorAndOpacity(Color);
+	}
+
+	if (ServerRowPlayers)
+	{
+		ServerRowPlayers->SetColorAndOpacity(Color);
 	}
 }

@@ -7,6 +7,7 @@
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSubsystemUtils.h"
 #include "OnlineSessionSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Game Includes
@@ -17,7 +18,10 @@ ATLobbyGameMode::ATLobbyGameMode()
 {
 	bNextMapLoadTimerSet = false;
 	WaitTimeAfterIsReadyToStart = 5.f;
+	PlayerCount = 0;
 }
+
+
 
 
 void ATLobbyGameMode::PreInitializeComponents()
@@ -28,49 +32,103 @@ void ATLobbyGameMode::PreInitializeComponents()
 }
 
 
+
+
 void ATLobbyGameMode::DefaultTick()
 {
-	// Set updated LobbyData
-	FLobbyData LobbyData;
+	// Get the current game state
+	ATLobbyGameState* LobbyGameState = GetGameState<ATLobbyGameState>();
+	if (!LobbyGameState) return;
+
+	FLobbyData CurrentLobbyData = LobbyGameState->GetLobbyData();
+
+	if (CurrentLobbyData.bIsMatchStarting)
+	{
+		--WaitTimeAfterIsReadyToStart;
+		CurrentLobbyData.TimeTillMatchStart = WaitTimeAfterIsReadyToStart;
+		if (WaitTimeAfterIsReadyToStart <= 0.f)
+		{
+			LoadNextMap();
+		}
+	}
+	else
+	{
+		CurrentLobbyData.ServerName = GetSessionServerName();
+		CurrentLobbyData.MaxPlayers = GetSessionMaxPlayers();
+		CurrentLobbyData.CurrentPlayers = PlayerCount;	//GetSessionCurrentPlayers();
+		CurrentLobbyData.VotesToStart = GetTotalVotesToStart();
+		CurrentLobbyData.VotesNeededToStart = FMath::FloorToInt(CurrentLobbyData.MaxPlayers / 2.f);
+
+		// If more then half the players are ready to then start match
+		CurrentLobbyData.bIsMatchStarting = IsReadyToStart(CurrentLobbyData.VotesToStart, CurrentLobbyData.MaxPlayers);
+		if (CurrentLobbyData.bIsMatchStarting)
+		{
+			CurrentLobbyData.TimeTillMatchStart = WaitTimeAfterIsReadyToStart;
+		}
+	}
+
+	LobbyGameState->SetLobbyData(CurrentLobbyData);
+}
 
 
-	// Check how many Votes to start
-	int32 VotesToStart = GetTotalVotesToStart();
+void ATLobbyGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
 
-	// Get Session Name
+	++PlayerCount;
+}
+
+
+void ATLobbyGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	PlayerCount = FMath::Max<int32>(0, --PlayerCount);
+}
+
+
+int32 ATLobbyGameMode::GetSessionMaxPlayers() const
+{
 	IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	if (SessionInterface)
 	{
 		FNamedOnlineSession* NamedOnlineSession = SessionInterface->GetNamedSession(GameSessionName);
 		if (NamedOnlineSession)
 		{
-			LobbyData.MaxPlayers = NamedOnlineSession->SessionSettings.NumPublicConnections;
-			LobbyData.CurrentPlayers = LobbyData.MaxPlayers - NamedOnlineSession->NumOpenPublicConnections;
-
-			FString SessionName;
-			NamedOnlineSession->SessionSettings.Get(SETTING_MAPNAME, SessionName);
-			LobbyData.ServerName = SessionName;
+			return NamedOnlineSession->SessionSettings.NumPublicConnections;
 		}
 	}
 
+	return -1;
+}
+
+FString ATLobbyGameMode::GetSessionServerName() const
+{
+	FString SessionName = "";
+	IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
+	if (SessionInterface)
+	{
+		FNamedOnlineSession* NamedOnlineSession = SessionInterface->GetNamedSession(GameSessionName);
+		if (NamedOnlineSession)
+		{
+			NamedOnlineSession->SessionSettings.Get(SETTING_MAPNAME, SessionName);
+		}
+	}
+
+	return SessionName;
+}
+
+
+int32 ATLobbyGameMode::GetSessionCurrentPlayers() const
+{
 	ATLobbyGameState* LobbyGameState = GetGameState<ATLobbyGameState>();
 	if (LobbyGameState)
 	{
-		LobbyData.CurrentPlayers = LobbyGameState->PlayerArray.Num();
-
-		LobbyGameState->SetLobbyData(LobbyData);
-
-		if (GEngine)
-		{
-			FString PublicConnectionString = FString::Printf(TEXT("NumpublicConnection: %d"), LobbyData.CurrentPlayers);
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, PublicConnectionString);
-
-			FString MaxConnectionString = FString::Printf(TEXT("NumpublicConnection: %d"), LobbyData.MaxPlayers);
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, MaxConnectionString);
-		}
+		return LobbyGameState->PlayerArray.Num();
 	}
-}
 
+	return -1;
+}
 
 int32 ATLobbyGameMode::GetTotalVotesToStart() const
 {
@@ -95,29 +153,16 @@ int32 ATLobbyGameMode::GetTotalVotesToStart() const
 
 bool ATLobbyGameMode::IsReadyToStart(const int32 VotesToStart, const int32 MaxPlayers) const
 {
-	int32 PlayerCount = 0;
-	if (VotesToStart >= MaxPlayers / 2)
-	{
-		return true;
-	}
-
-	auto GS = GetGameState<AGameState>();
-	if (GS)
-	{
-		PlayerCount = GS->PlayerArray.Num();
-		if (PlayerCount >= MaxPlayers)
-		{
-			return true;
-		}
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("IsReadyToStart: VotesToStart=%d, MaxPlayers=%d, PlayerCount=%d"), VotesToStart, MaxPlayers, PlayerCount);
-
-	return false;
+	return (VotesToStart >= (MaxPlayers / 2));
 }
 
 
 void ATLobbyGameMode::LoadNextMap()
 {
+	UWorld* World = GetWorld();
+	if (!World) return;
 
+	bUseSeamlessTravel = true;
+
+	World->ServerTravel("/Game/Tanks/Map/Map_WW2_Test?listen");
 }
