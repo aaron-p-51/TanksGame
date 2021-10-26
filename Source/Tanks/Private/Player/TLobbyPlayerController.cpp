@@ -8,19 +8,6 @@
 
 // Game Includes
 #include "Player/TLobbyPlayerState.h"
-#include "MenuSystem/TMultiplayerLobbyMenu.h"
-
-
-void ATLobbyPlayerController::BeginPlay()
-{
-	SpawnLobbyWidget();
-}
-
-
-void ATLobbyPlayerController::SpawnLobbyWidget()
-{
-	LobbyMenu = CreateWidget<UTMultiplayerLobbyMenu>(GetWorld(), LobbyMenuClass);
-}
 
 
 void ATLobbyPlayerController::VoteToStart(bool bStart)
@@ -44,13 +31,3 @@ void ATLobbyPlayerController::ServerVoteToStart_Implementation(bool bStart)
 {
 	VoteToStart(bStart);
 }
-
-
-void ATLobbyPlayerController::UpdateLobbyMenu() const
-{
-	if (LobbyMenu)
-	{
-		LobbyMenu->UpdateLobbyDataNew();
-	}
-}
-

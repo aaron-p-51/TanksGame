@@ -8,7 +8,7 @@
 
 void ATLobbyPlayerState::SetVoteToStart(bool Value)
 {
-	if (GetLocalRole() == ENetRole::ROLE_Authority)
+	if (GetLocalRole() < ENetRole::ROLE_Authority)
 	{
 		ServerSetVoteToStart(Value);
 	}

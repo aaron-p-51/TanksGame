@@ -21,6 +21,7 @@ enum class EGameInProgressState : uint8
 	EGINP_StateNotSpecified
 };
 
+
 UENUM(BlueprintType)
 enum class EShootableWeaponType : uint8
 {
@@ -29,6 +30,7 @@ enum class EShootableWeaponType : uint8
 
 	ESWT_DefaultMax		UMETA(DisplayName = "Default")
 };
+
 
 UENUM(BlueprintType)
 enum class EInfantryWeaponType : uint8

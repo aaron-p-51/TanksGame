@@ -3,22 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
-#include "TInGameMenu.generated.h"
+#include "GameStates/TBaseGameState.h"
+#include "TDeathmatchGameState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TANKS_API UTInGameMenu : public UUserWidget
+class TANKS_API ATDeathmatchGameState : public ATBaseGameState
 {
 	GENERATED_BODY()
-
-/**
- * Methods
- */
-protected:
-
-
-
+	
 };

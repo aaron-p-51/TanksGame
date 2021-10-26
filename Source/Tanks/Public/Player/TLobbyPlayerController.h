@@ -6,11 +6,12 @@
 #include "GameFramework/PlayerController.h"
 #include "TLobbyPlayerController.generated.h"
 
+/** Forward declarations */
 class UTTanksGameInstance;
 class UTMultiplayerLobbyMenu;
 
 /**
- * 
+ * Player controller for multiplayer lobby map
  */
 UCLASS()
 class TANKS_API ATLobbyPlayerController : public APlayerController
@@ -19,37 +20,8 @@ class TANKS_API ATLobbyPlayerController : public APlayerController
 
 
 /**
- * Members
- */
-
-protected:
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LobbyMenu")
-	TSubclassOf<UTMultiplayerLobbyMenu> LobbyMenuClass;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="LobbyMenu")
-	UTMultiplayerLobbyMenu* LobbyMenu;
-
-
-/**
 * Methods
 */
-
-private:
-
-	void SpawnLobbyWidget();
-
-
-protected:
-
-	/** Vote to Start on Server RCP */
-	UFUNCTION(Server, Reliable)
-	void ServerVoteToStart(bool bStart);
-
-	virtual void BeginPlay() override;
-
-
-
 
 public:
 
@@ -57,6 +29,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Lobby")
 	void VoteToStart(bool bStart);
 
-	void UpdateLobbyMenu() const;
+	/** Vote to Start on Server RCP */
+	UFUNCTION(Server, Reliable)
+	void ServerVoteToStart(bool bStart);
 
 };

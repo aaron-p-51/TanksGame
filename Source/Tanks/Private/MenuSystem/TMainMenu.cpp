@@ -5,42 +5,47 @@
 
 
 // Engine Includes
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Slider.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "GameFramework/PlayerController.h"
 #include "OnlineSubsystemUtils.h"
 
 
 // Game Includes
-#include "..\Public\MenuSystem\TServerRow.h"
+#include "MenuSystem/TErrorAckWidget.h"
+#include "MenuSystem/TServerRow.h"
 #include "Subsystems/TSessionSubsystem.h"
-#include "MenuSystem\TErrorAckWidget.h"
+#include "TTanksGameInstance.h"
 
 
-//bool UTMainMenu::Initialize()
-//{
-//	bool Success = Super::Initialize();
-//	if (Success)
-//	{
-//		bIsFocusable = true;
-//		Setup();
-//		BindSessionSubsystemEvents();
-//		Success = BindWidgetEvents();
-//	}
-//
-//	return Success;
-//}
+bool UTMainMenu::Initialize()
+{
+	bool Success = Super::Initialize();
+	ConfigureMultiplayerHostMenu();
+
+	return Success;
+}
+
 
 bool UTMainMenu::BindSessionSubsystemEvents()
 {
+	// Debug reminder for which subsystem is active
 	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
-	if (GEngine && OnlineSub && OnlineSub->GetSubsystemName() == "NULL")
+	if (GEngine && OnlineSub)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::White, TEXT("Using NULL OnlineSubsystem"));
+		if (OnlineSub->GetSubsystemName() == "NULL")
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::White, TEXT("Using NULL OnlineSubsystem"));
+		}
+		else if (OnlineSub->GetSubsystemName() == "Steam")
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::White, TEXT("Using STEAM OnlineSubsystem"));
+		}
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
@@ -49,6 +54,7 @@ bool UTMainMenu::BindSessionSubsystemEvents()
 	SessionSubsystem = GameInstance->GetSubsystem<UTSessionSubsystem>();
 	if (!SessionSubsystem) return false;
 
+	// Set all callback for OnlineSubsystem, see @TSessionSubsystem.h
 	SessionSubsystem->OnCreateSessionCompleteEvent.AddDynamic(this, &UTMainMenu::OnCreateSessionComplete);
 	SessionSubsystem->OnStartSessionCompleteEvent.AddDynamic(this, &UTMainMenu::OnStartSessionComplete);
 	SessionSubsystem->OnDestroySessionCompleteEvent.AddDynamic(this, &UTMainMenu::OnDestroySessionComplete);
@@ -63,55 +69,104 @@ bool UTMainMenu::BindSessionSubsystemEvents()
 }
 
 
+
 bool UTMainMenu::BindWidgetEvents()
 {
 	if (!SinglePlayerButton) return false;
-	SinglePlayerButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSinglePlayerButtonClick);
+	if (!SinglePlayerButton->OnClicked.IsBound())
+	{
+		SinglePlayerButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSinglePlayerButtonClick);
+	}
 
 	if (!MultiplayerButton) return false;
-	MultiplayerButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerButtonClick);
+	if (!MultiplayerButton->OnClicked.IsBound())
+	{
+		MultiplayerButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerButtonClick);
+	}
 
 	if (!SettingsButton) return false;
-	SettingsButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSettingsButtonClick);
+	if (!SettingsButton->OnClicked.IsBound())
+	{
+		SettingsButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSettingsButtonClick);
+	}
 
 	if (!SettingsBackButton) return false;
-	SettingsBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSettingsBackButtonClick);
+	if (!SettingsBackButton->OnClicked.IsBound())
+	{
+		SettingsBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnSettingsBackButtonClick);
+	}
 
 	if (!ExitButton) return false;
-	ExitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnExitButtonClick);
+	if (!ExitButton->OnClicked.IsBound())
+	{
+		ExitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnExitButtonClick);
+	}
 
 	if (!CancelConfirmQuitButton) return false;
-	CancelConfirmQuitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnCancelConfirmQuitButtonClick);
+	if (!CancelConfirmQuitButton->OnClicked.IsBound())
+	{
+		CancelConfirmQuitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnCancelConfirmQuitButtonClick);
+	}
 
 	if (!QuitConfirmQuitButton) return false;
-	QuitConfirmQuitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnQuitConfirmQuitButtonClick);
+	if (!QuitConfirmQuitButton->OnClicked.IsBound())
+	{
+		QuitConfirmQuitButton->OnClicked.AddDynamic(this, &UTMainMenu::OnQuitConfirmQuitButtonClick);
+	}
 
 	if (!MultiplayerHostButton) return false;
-	MultiplayerHostButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostButtonClick);
+	if (!MultiplayerHostButton->OnClicked.IsBound())
+	{
+		MultiplayerHostButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostButtonClick);
+	}
 
 	if (!MultiplayerJoinButton) return false;
-	MultiplayerJoinButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinButtonClick);
+	if (!MultiplayerJoinButton->OnClicked.IsBound())
+	{
+		MultiplayerJoinButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinButtonClick);
+	}
 
 	if (!MultiplayerBackButton) return false;
-	MultiplayerBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerBackButtonClick);
+	if (!MultiplayerBackButton->OnClicked.IsBound())
+	{
+		MultiplayerBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerBackButtonClick);
+	}
 
 	if (!MultiplayerHostBackButton) return false;
-	MultiplayerHostBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostBackButtonClick);
+	if (!MultiplayerHostBackButton->OnClicked.IsBound())
+	{
+		MultiplayerHostBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostBackButtonClick);
+	}
 
 	if (!MultiplayerHostHostButton) return false;
-	MultiplayerHostHostButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostHostButtonClick);
+	if (!MultiplayerHostHostButton->OnClicked.IsBound())
+	{
+		MultiplayerHostHostButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerHostHostButtonClick);
+	}
 
 	if (!MultiplayerJoinBackButton) return false;
-	MultiplayerJoinBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinBackButtonClick);
+	if (!MultiplayerJoinBackButton->OnClicked.IsBound())
+	{
+		MultiplayerJoinBackButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinBackButtonClick);
+	}
 
 	if (!MultiplayerJoinRefreshButton) return false;
-	MultiplayerJoinRefreshButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinRefreshButtonClick);
+	if (!MultiplayerJoinRefreshButton->OnClicked.IsBound())
+	{
+		MultiplayerJoinRefreshButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinRefreshButtonClick);
+	}
 
 	if (!MultiplayerJoinJoinButton) return false;
-	MultiplayerJoinJoinButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinJoinButtonClick);
+	if (!MultiplayerJoinJoinButton->OnClicked.IsBound())
+	{
+		MultiplayerJoinJoinButton->OnClicked.AddDynamic(this, &UTMainMenu::OnMultiplayerJoinJoinButtonClick);
+	}
 
 	if (!PlayerCountSlider) return false;
-	PlayerCountSlider->OnValueChanged.AddDynamic(this, &UTMainMenu::OnPlayerCountSliderValueChange);
+	if (!PlayerCountSlider->OnValueChanged.IsBound())
+	{
+		PlayerCountSlider->OnValueChanged.AddDynamic(this, &UTMainMenu::OnPlayerCountSliderValueChange);
+	}
 
 	return true;
 }
@@ -122,6 +177,8 @@ bool UTMainMenu::BindWidgetEvents()
 /**************************************************************************/
 void UTMainMenu::OnSinglePlayerButtonClick()
 {
+	// There is no single player implemented
+
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, TEXT("MainMenuSinglePlayerButton Clicked: Not Implemented"));
@@ -161,6 +218,7 @@ void UTMainMenu::OnCancelConfirmQuitButtonClick()
 
 void UTMainMenu::OnQuitConfirmQuitButtonClick()
 {
+	// Close application
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	if (PlayerController)
 	{
@@ -171,11 +229,24 @@ void UTMainMenu::OnQuitConfirmQuitButtonClick()
 
 void UTMainMenu::OnMultiplayerHostButtonClick()
 {
-	if (ServerNameTextBox)
-	{
-		ServerNameTextBox->SetText(FText());
-	}
+	//// Clear the text for the Server Name
+	//if (ServerNameTextBox)
+	//{
+	//	ServerNameTextBox->SetText(FText());
+	//}
 
+	//if (PlayerCountSlider)
+	//{
+	//	PlayerCountSlider->SetValue(0.f);
+	//}
+
+	//if (PlayerCountText)
+	//{
+	//	// TODO: Will need to set 
+	//	PlayerCountText->SetText(FText::FromString(TEXT("2")));
+	//}
+
+	ConfigureMultiplayerHostMenu();
 	SwitchSubmenu(MainMenuWidgetSwitcher, MultiplayerHostSubmenu);
 }
 
@@ -183,6 +254,7 @@ void UTMainMenu::OnMultiplayerHostButtonClick()
 void UTMainMenu::OnMultiplayerJoinButtonClick()
 {
 	SwitchSubmenu(MainMenuWidgetSwitcher, MultiplayerJoinSubmenu);
+	SearchForSessionsToJoin();
 }
 
 
@@ -283,6 +355,8 @@ void UTMainMenu::OnFindSessionComplete(const TArray<FOnlineSessionSearchResult>&
 	{
 		CreateErrorAckWidget(FString("Error Finding Sessions"), FString(""));
 	}
+
+	RemoveCurrentInfoDialogWidget();
 }
 
 
@@ -298,6 +372,7 @@ void UTMainMenu::OnJoinSessionComplete(EOnJoinSessionCompleteResult::Type Result
 	}
 	else
 	{
+		// If joining session is not successful create ErrorAckWidget displaying the error
 		FString ErrorDetails;
 		switch (Result)
 		{
@@ -334,9 +409,7 @@ void UTMainMenu::CreateNewSession()
 
 	if (ServerName.IsEmpty())
 	{
-		//
 		//	Alert user server name can not be empty
-		//
 		CreateErrorAckWidget(FString("Unable To Create Server"), FString("Server name can not be empty!"));
 		return;
 	}
@@ -369,10 +442,32 @@ void UTMainMenu::HostOpenLevelAfterSessionStart()
 {
 	TearDown();
 
-	// TODO: Need to get map name to transition to
 	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MultiplayerLobby", true, "listen");
 }
 
+
+void UTMainMenu::ConfigureMultiplayerHostMenu()
+{
+	UTTanksGameInstance* GameInstance = GetGameInstance<UTTanksGameInstance>();
+	if (!GameInstance) return;
+
+	if (ServerNameTextBox)
+	{
+		ServerNameTextBox->SetText(FText::FromString(TEXT("")));
+	}
+
+	if (PlayerCountSlider)
+	{
+		PlayerCountSlider->SetMinValue(GameInstance->GetMinMultiplayerSessionPlayerCount());
+		PlayerCountSlider->SetMaxValue(GameInstance->GetMaxMultiplaySessionPlayerCount());
+		PlayerCountSlider->SetValue(PlayerCountSlider->MinValue);
+	}
+
+	if (PlayerCountText)
+	{
+		PlayerCountText->SetText(FText::FromString(FString::FromInt(GameInstance->GetMinMultiplayerSessionPlayerCount())));
+	}
+}
 
 /**************************************************************************/
 /* Join Session Helpers */
@@ -383,12 +478,12 @@ void UTMainMenu::UpdateJoinServerList()
 	// and the rest to bSelected=false
 	if (ServerListScrollBox)
 	{
-		for (int32 i = 0; i < ServerListScrollBox->GetChildrenCount(); i++)
+		for (int32 i = 0; i < ServerListScrollBox->GetChildrenCount(); ++i)
 		{
 			UTServerRow* Row = Cast<UTServerRow>(ServerListScrollBox->GetChildAt(i));
 			if (Row)
 			{
-				Row->bIsSelected = (SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i);
+				Row->SetIsSelected((SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i));
 			}
 		}
 	}
@@ -405,14 +500,13 @@ void UTMainMenu::JoinSelectedServer()
 
 	if (SessionSubsystem && ServerListScrollBox)
 	{
-		auto Widget = ServerListScrollBox->GetChildAt(SelectedServerRowIndex.GetValue());
+		UWidget* Widget = ServerListScrollBox->GetChildAt(SelectedServerRowIndex.GetValue());
 		if (Widget)
 		{
-			auto ServerRowWidget = Cast<UTServerRow>(Widget);
+			UTServerRow* ServerRowWidget = Cast<UTServerRow>(Widget);
 			if (ServerRowWidget)
 			{
-				auto ServerRowSearchResults = ServerRowWidget->GetServerRowSearchResults();
-				SessionSubsystem->JoinGameSession(ServerRowSearchResults);
+				SessionSubsystem->JoinGameSession(ServerRowWidget->GetServerRowSearchResults());
 			}
 		}
 	}
@@ -423,7 +517,8 @@ void UTMainMenu::SearchForSessionsToJoin()
 {
 	if (SessionSubsystem)
 	{
-		SessionSubsystem->FindSessions(100, true);
+		SessionSubsystem->FindSessions(100);
+		CreateInfoDialogWidget(FString(TEXT("Searching for servers")), FString());
 	}
 }
 
@@ -443,11 +538,24 @@ void UTMainMenu::FillServerListScrollBox(const TArray<FOnlineSessionSearchResult
 
 	ServerListScrollBox->ClearChildren();
 
+	TArray<UUserWidget*> FoundWidgets;
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, ServerRowClass);
+
 	for (int32 i = 0; i < SessionResults.Num(); ++i)
 	{
 		if (SessionResults[i].IsValid())
 		{
-			auto ServerRow = CreateWidget<UTServerRow>(GetWorld(), ServerRowClass);
+			UTServerRow* ServerRow = nullptr;
+			if (i < FoundWidgets.Num())
+			{
+				ServerRow = Cast<UTServerRow>(FoundWidgets[i]);
+			}
+
+			if (!ServerRow)
+			{
+				ServerRow = CreateWidget<UTServerRow>(GetWorld(), ServerRowClass);
+			}
+
 			if (ServerRow)
 			{
 				ServerRow->Setup(this, i, SessionResults[i]);
@@ -463,19 +571,3 @@ void UTMainMenu::SetSelectedServerRowIndex(uint32 Index)
 	SelectedServerRowIndex = Index;
 	UpdateJoinServerList();
 }
-
-
-void UTMainMenu::UpdateServerListScrollBox()
-{
-	if (!ServerListScrollBox) return;
-
-	for (int32 i = 0; i < ServerListScrollBox->GetChildrenCount(); ++i)
-	{
-		auto Row = Cast<UTServerRow>(ServerListScrollBox->GetChildAt(i));
-		if (Row)
-		{
-			Row->bIsSelected = (SelectedServerRowIndex.IsSet() && SelectedServerRowIndex.GetValue() == i);
-		}
-	}
-}
-

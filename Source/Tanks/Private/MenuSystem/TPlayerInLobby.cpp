@@ -13,3 +13,4 @@ void UTPlayerInLobby::SetPlayerName(FText PlayerName)
 		PlayerNameText->SetText(PlayerName);
 	}
 }
+

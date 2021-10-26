@@ -6,6 +6,7 @@
 #include "GameFramework/GameState.h"
 #include "TLobbyGameState.generated.h"
 
+/** Multiplayer session settings. */
 USTRUCT(BlueprintType)
 struct FLobbyData
 {
@@ -21,6 +22,9 @@ struct FLobbyData
 	uint8 VotesToStart;
 
 	UPROPERTY(BlueprintReadOnly)
+	uint8 VotesNeededToStart;
+
+	UPROPERTY(BlueprintReadOnly)
 	FString ServerName;
 
 	UPROPERTY(BlueprintReadOnly)
@@ -28,13 +32,11 @@ struct FLobbyData
 
 	UPROPERTY(BlueprintReadOnly)
 	float TimeTillMatchStart;
-
-	
 };
 
 
 /**
- * 
+ * GameState for Multiplayer Lobby
  */
 UCLASS()
 class TANKS_API ATLobbyGameState : public AGameState
@@ -46,6 +48,7 @@ class TANKS_API ATLobbyGameState : public AGameState
  */
 protected:
 
+	/** Multiplayer session settings data */
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	FLobbyData LobbyData;
 
@@ -56,12 +59,14 @@ protected:
 
 public:
 
+	/** Set initial values for LobbyData */
 	ATLobbyGameState();
 
+	/** Get the currently set LobbyData */
 	UFUNCTION(BlueprintCallable)
 	FLobbyData GetLobbyData() const { return LobbyData; }
 
+	/** [Server] Set LobbyData */
 	void SetLobbyData(FLobbyData Data);
-	
 	
 };

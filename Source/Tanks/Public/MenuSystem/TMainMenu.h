@@ -7,6 +7,7 @@
 #include "MenuSystem/TMenuWidgetBase.h"
 #include "TMainMenu.generated.h"
 
+/** Forward declarations */
 class UTSessionSubsystem;
 class UEditableTextBox;
 class UTServerRow;
@@ -17,7 +18,7 @@ class UTErrorAckWidget;
 
 
 /**
- * 
+ * Class for Main Menu widget. Widget contains UI for player to navigate play options.
  */
 UCLASS()
 class TANKS_API UTMainMenu : public UTMenuWidgetBase
@@ -29,13 +30,17 @@ class TANKS_API UTMainMenu : public UTMenuWidgetBase
  */
 protected:
 
-	///** SessionSubsystem. Implements Session Interface to handle managing multilayer sessions  */
-	//UTSessionSubsystem* SessionSubsystem;
+	/** Server row class for each entry in ServerListScrollBox */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UUserWidget> ServerRowClass;
+
+	/** Selected index in ServerListScrollBox */
+	TOptional<uint32> SelectedServerRowIndex;
+
 
 	/**************************************************************************/
 	/* Widgets */
 	/**************************************************************************/
-	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UWidgetSwitcher* MainMenuWidgetSwitcher;
 
@@ -121,21 +126,13 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UButton* MultiplayerJoinJoinButton;
 
-	/** Server row class for each entry in ServerListScrollBox */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<UUserWidget> ServerRowClass;
-
-
-	/** Selected index in ServerListScrollBox */
-	TOptional<uint32> SelectedServerRowIndex;
-
 
 /**
  * Methods
  */
 protected:
 
-	//virtual bool Initialize() override;
+	virtual bool Initialize() override;
 
 	/** Bind widget events for widgets members */
 	virtual bool BindWidgetEvents() override;
@@ -143,11 +140,12 @@ protected:
 	/** Bind callbacks for SessionSubsystem events */
 	virtual bool BindSessionSubsystemEvents() override;
 
-	
+
+
 	/**************************************************************************/
 	/* Widget event bindings */
 	/**************************************************************************/
-
+private:
 	UFUNCTION()
 	void OnSinglePlayerButtonClick();
 
@@ -200,7 +198,6 @@ protected:
 	/**************************************************************************/
 	/* SessionSubsystem event callbacks */
 	/**************************************************************************/
-
 	UFUNCTION()
 	void OnCreateSessionComplete(bool Successful);
 
@@ -214,41 +211,39 @@ protected:
 
 	void OnJoinSessionComplete(EOnJoinSessionCompleteResult::Type Result);
 
+
 	/**************************************************************************/
 	/* Host Session Helpers */
 	/**************************************************************************/
-
 	/**
 	 * Create a new session. This function should be modified as needed to set the session settings required
-	 * for each session. For now we will only set the SessionName. Must also modify CreatSession function in MSessionSubsystem
-	 * to allow and establish a new session based on required session parameters
+	 * for each session. For now we will only set the SessionName and PlayerCount. Must modify CreatSession function in TSessionSubsystem
+	 * to allow and establish a new session based on additional session parameters
 	 */
 	UFUNCTION(BlueprintCallable)
-	virtual void CreateNewSession();
+	void CreateNewSession();
 
 	/** After CreateNewSession is called and OnCreateSessionComplete is success. Call this function to start the session*/
 	UFUNCTION(BlueprintCallable)
 	void StartCreatedSession();
 
-	/** After StartCreatedSession is called and OnStartSessionComplete is success. Call this function to travel to the next
-	 * map. Will not open level as a listen server*/
+	/** After StartCreatedSession is called and OnStartSessionComplete is success. Call this function to travel to the next map */
 	UFUNCTION(BlueprintCallable)
 	void HostOpenLevelAfterSessionStart();
+
+	void ConfigureMultiplayerHostMenu();
 
 
 	/**************************************************************************/
 	/* Join Session Helpers */
 	/**************************************************************************/
-
-	void UpdateJoinServerList();
-
 	/** Update ServerListScrollBox when the user selects a session in ServerListScrollBox  */
 	UFUNCTION(BlueprintCallable)
-	void UpdateServerListScrollBox();
+	void UpdateJoinServerList();
 
 	/** Search for a new session to join. This function can be modified to allow specific specific search parameters */
 	UFUNCTION(BlueprintCallable)
-	virtual void SearchForSessionsToJoin();
+	void SearchForSessionsToJoin();
 
 	/** After a session is selected in ServerListScrollBox attempt to join that session */
 	UFUNCTION(BlueprintCallable)
@@ -268,6 +263,4 @@ public:
 	 */
 	void SetSelectedServerRowIndex(uint32 Index);
 
-	TOptional<uint32> GetSelectedServerIndex() const { return SelectedServerRowIndex; }
-	
 };

@@ -48,126 +48,160 @@ public:
 	/** Delegate for when when CreateSession has fully completed */
 	FTOnCreateSessionComplete OnCreateSessionCompleteEvent;
 
-protected:
+private:
 
-	/** Bound to @OnCreateSessionCompleteEvent, CreateSession will call async functions wait for OnCreateSessionCompleted to be
+	/** Bound to @CreateSessionCompleteDelegateHandle, CreateSession will call async functions wait for OnCreateSessionCompleted to be
 	 * called before proceeding with additional session calls
 	 *
 	 * @param SessionName			Name of created session
-	 * @param Successful			true or session was created successfully
+	 * @param Successful			Session was created successfully
 	 */
 	void OnCreateSessionCompleted(FName SessionName, bool Successful);
 
-
-private:
-
-	// Create Session
+	/** Delegates for OnlineSession CreateSession async callbacks  */
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
 
 	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
+
 
 	/**************************************************************************/
 	/* Start Session */
 	/**************************************************************************/
 public:
 
-	// Start Session
+	/** Start the session created from @CreateSession  */ 
 	void StartSession();
+
+	/** Delegate for when StartSession has fully completed */
 	FTOnStartSessionComplete OnStartSessionCompleteEvent;
-
-protected:
-
-	// Start Session
-	void OnStartSessionCompleted(FName SessionName, bool Successful);
 
 private:
 
-	// Start Session
+	/** Bound to @StartSessionCompleteDelegateHandle, StartSession will call async functions wait for OnStartSessionCompleted to be
+	 * called before proceeding with additional session calls
+	 *
+	 * @param SessionName			Name of created session
+	 * @param Successful			Session was started successfully
+	 */
+	void OnStartSessionCompleted(FName SessionName, bool Successful);
+
+	/** Delegates for OnlineSession StartSession async callbacks */
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSessionCompleteDelegateHandle;
+
 
 	/**************************************************************************/
 	/* End Session */
 	/**************************************************************************/
 public:
 
-	// End Session
+	/** End the current session */
 	void EndSession();
+
+	/** Delegate for when EndSession has fully completed */
 	FTOnEndSessionComplete OnEndSessionCompleteEvent;
-
-protected:
-
-	// End Session
-	void OnEndSessionCompleted(FName SessionName, bool Successful);
 
 private:
 
-	// End Session
+	/** Bound to @EndSessionCompleteDelegateHandle, EndSession will call async functions wait for OnEndSessionCompleted to be
+	 * called before proceeding with additional session calls
+	 *
+	 * @param SessionName			Name of created session
+	 * @param Successful			Session was ended successfully
+	 */
+	void OnEndSessionCompleted(FName SessionName, bool Successful);
+
+
+	/** Delegates for OnlineSession EndSession async callbacks */
 	FOnEndSessionCompleteDelegate EndSessionCompleteDelegate;
 	FDelegateHandle EndSessionCompleteDelegateHandle;
+
 
 	/**************************************************************************/
 	/* Destroy Session */
 	/**************************************************************************/
 public:
 
-	// Destroy Session
+	/** Destroy the current session */
 	void DestroySession();
+
+	/** Delegate for when DestroySession has fully completed */
 	FTOnDestroySessionComplete OnDestroySessionCompleteEvent;
-
-protected:
-
-
-	// Destroy Session
-	void OnDestroySessionCompleted(FName SessionName, bool Successful);
 
 private:
 
-	// Destroy Session
+	/** Bound to @DestroySessionCompleteDelegateHandle, DestroySession will call async functions wait for OnDestroySessionCompleted to be
+	 * called before proceeding with additional session calls
+	 *
+	 * @param SessionName			Name of created session
+	 * @param Successful			Session was destroyed successfully
+	 */
+	void OnDestroySessionCompleted(FName SessionName, bool Successful);
+
+	/** Delegates for OnlineSession DestroySession async callbacks */
 	FOnDestroySessionCompleteDelegate DestroySessionCompleteDelegate;
 	FDelegateHandle DestroySessionCompleteDelegateHandle;
+
 
 	/**************************************************************************/
 	/* Find Session */
 	/**************************************************************************/
 public:
-	// Find Sessions
-	void FindSessions(int32 MaxSearchResults, bool IsLanQuery);
+
+	/** Find a session to join
+	 *
+	 * @param MaxSearchResults		When OnFindSessionsCompleteEvent is broadcasted no more than this many session will be sent
+	*/
+	void FindSessions(int32 MaxSearchResults);
+
+	/** Delegate for when FindSession has fully completed */
 	FTOnFindSessionComplete OnFindSessionsCompleteEvent;
 
 
-protected:
-
-	// Find Sessions
-	void OnFindSessionsCompleted(bool Successful);
-
 private:
 
-	// Find Sessions
+	/** Bound to @FindSessionsCompleteDelegateHandle, JoinSession will call async functions wait for OnFindSessionsCompleted to be
+	 * called before proceeding with additional session calls
+	 *
+	 * @param Successful			Session was started successfully
+	 */
+	void OnFindSessionsCompleted(bool Successful);
+
+
+	/** Delegates for OnlineSession FindSession  async callbacks */
 	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
 	FDelegateHandle FindSessionsCompleteDelegateHandle;
+
 	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
+
 
 	/**************************************************************************/
 	/* Join Session */
 	/**************************************************************************/
 public:
 
-	// Join Sessions
+	/** Join session passed in SessionResult */
 	void JoinGameSession(const FOnlineSessionSearchResult& SessionResult);
+
+	/** Delegate for when JoinGameSession has fully completed */
 	FTOnJoinSessionComplete OnJoinSessionCompleteEvent;
 
+	/** Try to travel to the currently joined session */
 	bool TryTravelToCurrentSession();
-
-protected:
-
-	// Join Session
-	void OnJoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
 private:
 
-	// Join Session
+	/** Bound to @JoinSessionCompleteDelegateHandle, JoinSession will call async functions wait for OnJoinSessionCompleted to be
+	 * called before proceeding with additional session calls
+	 *
+	 * @param SessionName			Name of Session attempted to join
+	 * @param Result				Result of attempting to join session
+	 */
+	void OnJoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+
+
+	/** Delegates for OnlineSession JoinSession async callbacks */
 	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;
 	FDelegateHandle JoinSessionCompleteDelegateHandle;
 

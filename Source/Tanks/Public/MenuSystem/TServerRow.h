@@ -7,17 +7,17 @@
 #include "Blueprint/UserWidget.h"
 #include "TServerRow.generated.h"
 
+/** Forward declarations */
 class UTextBlock;
 class UButton;
 class UTMainMenu;
 
 /**
- * 
+ * Class for sessions to join. Display session info to player
  */
 UCLASS()
 class TANKS_API UTServerRow : public UUserWidget
 {
-
 
 	GENERATED_BODY()
 
@@ -34,6 +34,10 @@ protected:
 
 	/** Session search results this server row represents */
 	FOnlineSessionSearchResult ServerRowSearchResults;
+
+	/* Specify if this ServerRow is selected in MainMenu*/
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsSelected = false;
 
 	/**************************************************************************/
 	/* Widgets */
@@ -71,13 +75,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	FSlateColor DefaultTextColor;
 
-
 public:
 
-	/* Specify if this ServerRow is selected in MainMenu*/
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsSelected = false;
-
+	/** Header widget used as ServerRow column data */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsHeader = false;
 
@@ -91,6 +91,7 @@ public:
 	void SetServerNameText(FText Text);
 	void SetServerHostUserName(FText Text);
 	void SetServerPlayersText(uint16 CurrentPlayers, uint16 MaxPlayers);
+	void SetIsSelected(bool Selected);
 
 	/**
 	 * Setup ServerRow, will populate widget text field based on Results.
@@ -103,16 +104,22 @@ public:
 
 	FORCEINLINE FOnlineSessionSearchResult GetServerRowSearchResults() const { return ServerRowSearchResults; }
 
-	///** Sets this server Row as the selected index in Parent */
-	//UFUNCTION()
-	//void ServerRowSelectBtnClicked();
-
 protected:
 
+	
 	virtual bool Initialize() override;
 
+private:
+
+	/** Set Widget properties */
 	void SetServerRowData();
 
+	/** Set the color all UUTextBlock widgets that are children of ServerRowSelectButton */
+	void SetServerRowTextColor(FSlateColor Color);
+
+	/**************************************************************************/
+	/* Widget event bindings */
+	/**************************************************************************/
 
 	/** Sets this server Row as the selected index in Parent. Set color indicating it is selected */
 	UFUNCTION()
@@ -125,8 +132,4 @@ protected:
 	/** Set color indicating ServerRow is not selected or under players cursor  */
 	UFUNCTION()
 	void ServerRowSelectButtonUnhovered();
-
-	/** Set the color all UUTextBlock widgets that are children of ServerRowSelectButton */
-	void SetServerRowTextColor(FSlateColor Color);
-	
 };

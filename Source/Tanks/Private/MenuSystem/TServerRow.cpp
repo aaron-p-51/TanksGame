@@ -29,24 +29,33 @@ void UTServerRow::Setup(UTMainMenu* InParent, uint32 InIndex, const FOnlineSessi
 	ServerRowSearchResults = Result;
 
 	if (ServerRowSelectButton)
-	{
-		ServerRowSelectButton->OnClicked.AddDynamic(this, &UTServerRow::ServerRowSelectButtonClicked);
-		ServerRowSelectButton->OnHovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonHovered);
-		ServerRowSelectButton->OnUnhovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonUnhovered);
+	{	
+		if (!ServerRowSelectButton->OnClicked.IsBound())
+		{
+			ServerRowSelectButton->OnClicked.AddDynamic(this, &UTServerRow::ServerRowSelectButtonClicked);
+		}
+		if (!ServerRowSelectButton->OnHovered.IsBound())
+		{
+			ServerRowSelectButton->OnHovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonHovered);
+		}
+		if (!ServerRowSelectButton->OnUnhovered.IsBound())
+		{
+			ServerRowSelectButton->OnUnhovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonUnhovered);
+		}
 	}
 	
 	SetServerRowData();
 }
 
 
-
-
 void UTServerRow::SetServerRowData()
 {
 	// Set the server name in the new server row entry. This is what the host named the server
 	FString ServerName;
-	ServerRowSearchResults.Session.SessionSettings.Get(SETTING_MAPNAME, ServerName);
-	SetServerNameText(FText::FromString(ServerName));
+	if (ServerRowSearchResults.Session.SessionSettings.Get(SETTING_MAPNAME, ServerName))
+	{
+		SetServerNameText(FText::FromString(ServerName));
+	}
 
 	// Set the server host name (Player name) in the new server row entry
 	SetServerHostUserName(FText::FromString(ServerRowSearchResults.Session.OwningUserName));
@@ -86,6 +95,17 @@ void UTServerRow::SetServerPlayersText(uint16 CurrentPlayers, uint16 MaxPlayers)
 }
 
 
+void UTServerRow::SetIsSelected(bool Selected)
+{
+	bIsSelected = Selected;
+
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(DefaultTextColor);
+	}
+}
+
+
 void UTServerRow::ServerRowSelectButtonClicked()
 {
 	if (MainMenuWidget)
@@ -99,27 +119,36 @@ void UTServerRow::ServerRowSelectButtonClicked()
 
 void UTServerRow::ServerRowSelectButtonHovered()
 {
-	SetServerRowTextColor(HoveredTextColor);
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(HoveredTextColor);
+	}
 }
 
 
 void UTServerRow::ServerRowSelectButtonUnhovered()
 {
-	SetServerRowTextColor(DefaultTextColor);
+	if (!bIsSelected)
+	{
+		SetServerRowTextColor(DefaultTextColor);
+	}
 }
 
 
 void UTServerRow::SetServerRowTextColor(FSlateColor Color)
 {
-	if (ServerRowSelectButton)
+	if (ServerRowName)
 	{
-		for (auto& Child : ServerRowSelectButton->GetAllChildren())
-		{
-			auto TextChild = Cast<UTextBlock>(Child);
-			if (TextChild)
-			{
-				TextChild->SetColorAndOpacity(Color);
-			}
-		}
+		ServerRowName->SetColorAndOpacity(Color);
+	}
+
+	if (ServerRowHost)
+	{
+		ServerRowHost->SetColorAndOpacity(Color);
+	}
+
+	if (ServerRowPlayers)
+	{
+		ServerRowPlayers->SetColorAndOpacity(Color);
 	}
 }
