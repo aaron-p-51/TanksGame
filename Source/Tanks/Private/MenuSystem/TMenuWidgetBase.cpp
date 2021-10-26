@@ -4,14 +4,13 @@
 #include "MenuSystem\TMenuWidgetBase.h"
 
 // Engine Includes
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/WidgetSwitcher.h"
 
-#include "Blueprint/WidgetBlueprintLibrary.h"
 
 // Game Includes
-#include "MenuSystem/TInfoDialogWidget.h"
 #include "MenuSystem/TErrorAckWidget.h"
-
+#include "MenuSystem/TInfoDialogWidget.h"
 
 
 bool UTMenuWidgetBase::Initialize()
@@ -139,7 +138,6 @@ void UTMenuWidgetBase::CreateInfoDialogWidget(const FString& DialogTitle, const 
 	if (!InfoDailogWidget)
 	{
 		InfoDailogWidget = CreateWidget<UTInfoDialogWidget>(GetWorld(), InfoDialogWidgetClass);
-		
 	}
 
 	if (InfoDailogWidget)
@@ -149,6 +147,7 @@ void UTMenuWidgetBase::CreateInfoDialogWidget(const FString& DialogTitle, const 
 
 	CurrentDialogWidget = InfoDailogWidget;
 }
+
 
 void UTMenuWidgetBase::RemoveCurrentInfoDialogWidget()
 {

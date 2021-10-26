@@ -6,6 +6,7 @@
 #include "MenuSystem/TMenuWidgetBase.h"
 #include "TMultiplayerLobbyMenu.generated.h"
 
+/** Forward declarations */
 class ATLobbyGameState;
 class UTextBlock;
 class UCheckBox;
@@ -17,7 +18,7 @@ class USizeBox;
 class UTSessionSubsystem;
 
 /**
- * 
+ * Menu widget for multilayer lobby map
  */
 UCLASS()
 class TANKS_API UTMultiplayerLobbyMenu : public UTMenuWidgetBase
@@ -29,25 +30,28 @@ class TANKS_API UTMultiplayerLobbyMenu : public UTMenuWidgetBase
  */
 protected:
 
-	///** SessionSubsystem. Implements Session Interface to handle managing multilayer sessions  */
-	//UTSessionSubsystem* SessionSubsystem;
-
 	UPROPERTY()
 	ATLobbyGameState* LobbyGameState;
 
+	/** Widget to show player name */
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UTPlayerInLobby> PlayerInLobbyWidgetClass;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Data Update")
-	float UpdateLobbyDataRate = 0.5f;
+	/** Maps current players with instance of PlayerInLobbyWidgetClass */
+	UPROPERTY()
+	TMap<APlayerState*, UTPlayerInLobby*> PlayerInLobbyMap;
 
+	/** Data update rate UI to show current session data */
+	UPROPERTY(EditDefaultsOnly, Category = "Data Update")
+	float UpdateLobbyDataRate = 0.3f;
+
+	/** Timer handle to update UI */
 	FTimerHandle TimerHandler_UpdateLobbyData;
 
 	
 	/**************************************************************************/
 	/* Widgets */
 	/**************************************************************************/
-
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* ServerNameText;
 
@@ -102,18 +106,13 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UVerticalBox* PlayersBox;
 
-
-	UPROPERTY()
-	TMap<APlayerState*, UTPlayerInLobby*> PlayerInLobbyMap;
-
-
-
 /**
  * Methods
  */
 
 protected:
 
+	/** Set timer to update UI data, init all widget properties before updates start  */
 	virtual bool Initialize() override;
 
 	/** Bind widget events for widgets members above */
@@ -122,9 +121,13 @@ protected:
 	/** Bind callbacks for SessionSubsystem events */
 	virtual bool BindSessionSubsystemEvents() override;
 
+	/** Get the game state used for Multilayer Player Lobby */
+	ATLobbyGameState* GetLobbyGameState() const;
+
 	/**************************************************************************/
 	/* Widget event bindings */
 	/**************************************************************************/
+private:
 
 	UFUNCTION()
 	void OnVoteToStartCheckBoxChange(bool IsChecked);
@@ -141,44 +144,24 @@ protected:
 	/**************************************************************************/
 	/* SessionSubsystem event callbacks */
 	/**************************************************************************/
-
 	UFUNCTION()
 	void OnEndSessionComplete(bool Successful);
 
+	/**************************************************************************/
+	/* Update UI */
+	/**************************************************************************/
 
- private:
-
-	 ATLobbyGameState* GetLobbyGameState() const;
-
-	/** Update the current vote count text widgets needed to start match */
-	void UpdateVotesToStartText(int32 Votes, int32 VotesNeeded);
-
-	/** Update the Server/Session name */
-	void UpdateServerName(const FString& ServerName);
-
-	void UpdateTimeTillMatchStart(int32 SecondsTillMatchStart);
-
-	void UpdatePlayersInLobby(ATLobbyGameState* GameState);
-
-	void UpdatePlayersInLobbyCount(const int32 CurrentPlayers, const int32 MaxPlayers);
-
-	UFUNCTION()
 	void UpdateLobbyData();
 
+	/** Set widget properties before first update. Makes the UI look cleaner before first update */
 	void InitWidgetProperties();
+
+	/** Updates the UI every tick of TimerHandler_UpdateLobbyData */
+	void UpdateServerName(const FString& ServerName);
+	void UpdateVotesToStartText(int32 Votes, int32 VotesNeeded);
+	void UpdatePlayersInLobbyCount(const int32 CurrentPlayers, const int32 MaxPlayers);
+	void UpdatePlayersInLobby(ATLobbyGameState* GameState);
+	void UpdateTimeTillMatchStart(int32 SecondsTillMatchStart);
 	
-
-
- public:
-	
-
-
-	//UFUNCTION(BlueprintCallable, Category = "Menu")
-	//FString GetTotalPlayers();
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void UpdatePlayerList();
-
-
 	
 };

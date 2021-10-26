@@ -17,11 +17,12 @@
 
 
 // Game Includes
-#include "Player/TLobbyPlayerController.h"
-#include "Player/TLobbyPlayerState.h"
 #include "GameStates/TLobbyGameState.h"
 #include "MenuSystem/TPlayerInLobby.h"
+#include "Player/TLobbyPlayerController.h"
+#include "Player/TLobbyPlayerState.h"
 #include "Subsystems/TSessionSubsystem.h"
+
 
 bool UTMultiplayerLobbyMenu::Initialize()
 {
@@ -59,6 +60,38 @@ void UTMultiplayerLobbyMenu::InitWidgetProperties()
 }
 
 
+bool UTMultiplayerLobbyMenu::BindWidgetEvents()
+{
+	if (!VoteToStartCheckBox) return false;
+	if (!VoteToStartCheckBox->OnCheckStateChanged.IsBound())
+	{
+		VoteToStartCheckBox->OnCheckStateChanged.AddDynamic(this, &UTMultiplayerLobbyMenu::OnVoteToStartCheckBoxChange);
+	}
+
+	if (!QuitToMainMenuButton) return false;
+	if (!QuitToMainMenuButton->OnClicked.IsBound())
+	{
+		QuitToMainMenuButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnQuitToMainMenuButtonClick);
+	}
+
+	if (!ConfirmQuitButton) return false;
+	if (!ConfirmQuitButton->OnClicked.IsBound())
+	{
+		ConfirmQuitButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnConfirmQuitButtonClick);
+	}
+
+	if (!CancelQuitButton) return false;
+	if (!CancelQuitButton->OnClicked.IsBound())
+	{
+		CancelQuitButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnCancelQuitButtonClick);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("LobbyWidget, BindWidgetEvents()"));
+
+	return true;
+}
+
+
 bool UTMultiplayerLobbyMenu::BindSessionSubsystemEvents()
 {
 	if (SessionSubsystem)
@@ -71,26 +104,68 @@ bool UTMultiplayerLobbyMenu::BindSessionSubsystemEvents()
 }
 
 
-bool UTMultiplayerLobbyMenu::BindWidgetEvents()
+/**************************************************************************/
+/* Widget event bindings */
+/**************************************************************************/
+void UTMultiplayerLobbyMenu::OnVoteToStartCheckBoxChange(bool IsChecked)
 {
-	if (!VoteToStartCheckBox) return false;
-	VoteToStartCheckBox->OnCheckStateChanged.AddDynamic(this, &UTMultiplayerLobbyMenu::OnVoteToStartCheckBoxChange);
+	APlayerController* PlayerController = GetOwningLocalPlayer()->GetPlayerController(GetWorld());
+	if (!PlayerController) return;
 
-	if (!QuitToMainMenuButton) return false;
-	QuitToMainMenuButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnQuitToMainMenuButtonClick);
+	ATLobbyPlayerController* LobbyPlayerController = Cast<ATLobbyPlayerController>(PlayerController);
+	if (!LobbyPlayerController) return;
 
-	if (!ConfirmQuitButton) return false;
-	ConfirmQuitButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnConfirmQuitButtonClick);
-
-	if (!CancelQuitButton) return false;
-	CancelQuitButton->OnClicked.AddDynamic(this, &UTMultiplayerLobbyMenu::OnCancelQuitButtonClick);
-
-	UE_LOG(LogTemp, Warning, TEXT("LobbyWidget, BindWidgetEvents()"));
-
-	return true;
+	LobbyPlayerController->VoteToStart(IsChecked);
 }
 
 
+void UTMultiplayerLobbyMenu::OnQuitToMainMenuButtonClick()
+{
+	bool Success = SwitchSubmenu(QuitWidgetSwitcher, ConfirmQuitSubmenu);
+	if (Success && ConfirmQuitText)
+	{
+		// Check to see if the local player is hosting the session. If so alert the player all client will be disconnected upon quitting
+		APlayerController* OwningPlayerController = GetOwningLocalPlayer()->GetPlayerController(GetWorld());
+		if (OwningPlayerController && OwningPlayerController->HasAuthority())
+		{
+			ConfirmQuitText->SetText(FText::FromString("Warning you are the Host. All clients will be disconnected!"));
+		}
+		else
+		{
+			ConfirmQuitText->SetText(FText::FromString("Are you sure?"));
+		}
+	}
+}
+
+
+void UTMultiplayerLobbyMenu::OnConfirmQuitButtonClick()
+{
+	if (SessionSubsystem)
+	{
+		SessionSubsystem->EndSession();
+	}
+}
+
+
+void UTMultiplayerLobbyMenu::OnCancelQuitButtonClick()
+{
+	SwitchSubmenu(QuitWidgetSwitcher, QuitSubmenu);
+}
+
+
+/**************************************************************************/
+/* SessionSubsystem event callbacks */
+/**************************************************************************/
+void UTMultiplayerLobbyMenu::OnEndSessionComplete(bool Successful)
+{
+	UE_LOG(LogTemp, Warning, TEXT("UMInGameMenu::OnEndSessionComplete, Success = %d"), Successful);
+	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MainMenu", true);
+}
+
+
+/**************************************************************************/
+/* Update UI */
+/**************************************************************************/
 void UTMultiplayerLobbyMenu::UpdateLobbyData()
 {
 	if (!LobbyGameState)
@@ -126,6 +201,26 @@ ATLobbyGameState* UTMultiplayerLobbyMenu::GetLobbyGameState() const
 }
 
 
+void UTMultiplayerLobbyMenu::UpdateServerName(const FString& ServerName)
+{
+	if (!ServerNameText) return;
+
+	ServerNameText->SetVisibility(ESlateVisibility::Visible);
+
+	FString ServerNameUpper = ServerName.ToUpper();
+
+	// check to see if the server/session name contains the word server. If not then add the string "server" to the end
+	if (ServerNameUpper.Contains(FString("SERVER")))
+	{
+		ServerNameText->SetText(FText::FromString(ServerNameUpper));
+	}
+	else
+	{
+		ServerNameText->SetText(FText::FromString(ServerNameUpper + " SERVER"));
+	}
+}
+
+
 void UTMultiplayerLobbyMenu::UpdateVotesToStartText(int32 Votes, int32 VotesNeeded)
 {
 	if (VoteToStartBox)
@@ -145,22 +240,44 @@ void UTMultiplayerLobbyMenu::UpdateVotesToStartText(int32 Votes, int32 VotesNeed
 }
 
 
-void UTMultiplayerLobbyMenu::UpdateServerName(const FString& ServerName)
+void UTMultiplayerLobbyMenu::UpdatePlayersInLobbyCount(const int32 CurrentPlayers, const int32 MaxPlayers)
 {
-	if (!ServerNameText) return;
-
-	ServerNameText->SetVisibility(ESlateVisibility::Visible);
-
-	FString ServerNameUpper = ServerName.ToUpper();
-
-	// check to see if the server/session name contains the word server. If not then add the string "server" to the end
-	if (ServerNameUpper.Contains(FString("SERVER")))
+	if (PlayerCountText)
 	{
-		ServerNameText->SetText(FText::FromString(ServerName));
+		PlayerCountText->SetText(FText::FromString(FString::FromInt(CurrentPlayers)));
 	}
-	else
+
+	if (MaxPlayersText)
 	{
-		ServerNameText->SetText(FText::FromString(ServerName + " Server"));
+		MaxPlayersText->SetText(FText::FromString(FString::FromInt(MaxPlayers)));
+	}
+}
+
+
+void UTMultiplayerLobbyMenu::UpdatePlayersInLobby(ATLobbyGameState* GameState)
+{
+	if (!PlayersBox || !GameState) return;
+
+	PlayersBox->ClearChildren();
+
+	for (auto Player : LobbyGameState->PlayerArray)
+	{
+		// If a player in GameState PlayerArray is not in PlayerInLobbyMap then create a new UTPlayerInLobby widget. Create a new
+		// map entry in PlayerInLobbyMap and add that player to the created UTPlayerInLobby widget
+		UTPlayerInLobby** PlayerInLobby = PlayerInLobbyMap.Find(Player);
+		if (!PlayerInLobby)
+		{
+			UTPlayerInLobby* PlayerInLobbyWidget = CreateWidget<UTPlayerInLobby>(GetWorld(), PlayerInLobbyWidgetClass);
+			if (PlayerInLobbyWidget)
+			{
+				PlayerInLobbyWidget->SetPlayerName(FText::FromString(Player->GetPlayerName()));
+				PlayerInLobbyMap.Add(Player, PlayerInLobbyWidget);
+			}
+		}
+		else
+		{
+			PlayersBox->AddChildToVerticalBox(*PlayerInLobby);
+		}
 	}
 }
 
@@ -192,113 +309,3 @@ void UTMultiplayerLobbyMenu::UpdateTimeTillMatchStart(int32 SecondsTillMatchStar
 	}
 }
 
-
-void UTMultiplayerLobbyMenu::UpdatePlayersInLobby(ATLobbyGameState* GameState)
-{
-	if (!PlayersBox || !GameState) return;
-
-	for (auto Player : LobbyGameState->PlayerArray)
-	{
-		if (!PlayerInLobbyMap.Find(Player))
-		{
-			UTPlayerInLobby* PlayerInLobbyWidget = CreateWidget<UTPlayerInLobby>(GetWorld(), PlayerInLobbyWidgetClass);
-			if (PlayerInLobbyWidget)
-			{
-				PlayerInLobbyWidget->SetPlayerName(FText::FromString(Player->GetPlayerName()));
-				PlayerInLobbyMap.Add(Player, PlayerInLobbyWidget);
-				PlayersBox->AddChildToVerticalBox(PlayerInLobbyWidget);
-			}
-		}
-	}
-
-	////////////////////////////////////////////////////////
-	////
-	//// Debug
-	////
-	/////////////////////////////////////////////////////////
-
-	//TArray<UUserWidget*> FoundWidgets;
-
-	//UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, PlayerInLobbyWidgetClass, false);
-	//
-	//int32 FoundWidgetCount = 0;
-	//for (auto& Widget : FoundWidgets)
-	//{
-	//	if (Cast<UTPlayerInLobby>(Widget) != nullptr)
-	//	{
-	//		++FoundWidgetCount;
-	//	}
-	//}
-
-	//UE_LOG(LogTemp, Warning, TEXT("Found %d widgets of type PlayerInLobbyWidgetClass"), FoundWidgetCount);
-}
-
-
-void UTMultiplayerLobbyMenu::UpdatePlayersInLobbyCount(const int32 CurrentPlayers, const int32 MaxPlayers)
-{
-	if (PlayerCountText)
-	{
-		PlayerCountText->SetText(FText::FromString(FString::FromInt(CurrentPlayers)));
-	}
-
-	if (MaxPlayersText)
-	{
-		MaxPlayersText->SetText(FText::FromString(FString::FromInt(MaxPlayers)));
-	}
-}
-
-
-/**************************************************************************/
-/* Widget event bindings */
-/**************************************************************************/
-void UTMultiplayerLobbyMenu::OnVoteToStartCheckBoxChange(bool IsChecked)
-{
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (!PlayerController) return;
-
-	ATLobbyPlayerController* LobbyPlayerController = Cast<ATLobbyPlayerController>(PlayerController);
-	if (!LobbyPlayerController) return;
-
-	LobbyPlayerController->VoteToStart(IsChecked);
-}
-
-
-void UTMultiplayerLobbyMenu::OnQuitToMainMenuButtonClick()
-{
-	bool Success = SwitchSubmenu(QuitWidgetSwitcher, ConfirmQuitSubmenu);
-	if (Success && ConfirmQuitText)
-	{
-		// Check to see if the local player is hosting the session. If so alert the player all client will be disconnected upon quitting
-		APlayerController* OwningPlayerController = GetOwningLocalPlayer()->GetPlayerController(GetWorld());
-		if (OwningPlayerController && OwningPlayerController->HasAuthority())
-		{
-			ConfirmQuitText->SetText(FText::FromString("Warning you are the Host.All clients will be disconnected"));
-		}
-		else
-		{
-			ConfirmQuitText->SetText(FText::FromString("Are you sure"));
-		}
-	}
-}
-
-
-void UTMultiplayerLobbyMenu::OnConfirmQuitButtonClick()
-{
-	if (SessionSubsystem)
-	{
-		SessionSubsystem->EndSession();
-	}
-}
-
-
-void UTMultiplayerLobbyMenu::OnCancelQuitButtonClick()
-{
-	SwitchSubmenu(QuitWidgetSwitcher,  QuitSubmenu);
-}
-
-
-void UTMultiplayerLobbyMenu::OnEndSessionComplete(bool Successful)
-{
-	UE_LOG(LogTemp, Warning, TEXT("UMInGameMenu::OnEndSessionComplete, Success = %d"), Successful);
-	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MainMenu", true);
-}

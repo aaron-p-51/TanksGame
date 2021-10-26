@@ -8,7 +8,6 @@
 #include "Components/TextBlock.h"
 
 
-
 void UTErrorAckWidget::Configure(UUserWidget* DialogSpawningWidget, bool DisableInputToSpawningParent, EInputModeOnClose InputModeOnClose, const FText& DialogTitleText, const FText& DialogDetailsText)
 {
 	Super::Configure(DialogSpawningWidget, DisableInputToSpawningParent, InputModeOnClose, DialogTitleText, DialogDetailsText);
@@ -19,33 +18,18 @@ void UTErrorAckWidget::Configure(UUserWidget* DialogSpawningWidget, bool Disable
 }
 
 
-bool UTErrorAckWidget::BindWidgetEvents()
+void UTErrorAckWidget::BindWidgetEvents()
 {
-	if (!CloseButton) return false;
-	if (!CloseButton->OnClicked.IsAlreadyBound(this, &UTErrorAckWidget::OnCloseButtonClick))
+	if (CloseButton && !CloseButton->OnClicked.IsAlreadyBound(this, &UTErrorAckWidget::OnCloseButtonClick))
 	{
 		CloseButton->OnClicked.AddDynamic(this, &UTErrorAckWidget::OnCloseButtonClick);
 	}
-
-	return true;
 }
 
 
 void UTErrorAckWidget::OnCloseButtonClick()
 {
-
 	RemoveWidget();
-	/*if (InputModeOnWidgetClose == EInputModeOnClose::EIMOC_GameOnly)
-	{
-		SetGameInputMode();
-	}
-
-	if (SpawningWidget)
-	{
-		SpawningWidget->SetIsEnabled(true);
-	}
-
-	this->RemoveFromViewport();*/
 }
 
 

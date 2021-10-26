@@ -29,24 +29,33 @@ void UTServerRow::Setup(UTMainMenu* InParent, uint32 InIndex, const FOnlineSessi
 	ServerRowSearchResults = Result;
 
 	if (ServerRowSelectButton)
-	{
-		ServerRowSelectButton->OnClicked.AddDynamic(this, &UTServerRow::ServerRowSelectButtonClicked);
-		ServerRowSelectButton->OnHovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonHovered);
-		ServerRowSelectButton->OnUnhovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonUnhovered);
+	{	
+		if (!ServerRowSelectButton->OnClicked.IsBound())
+		{
+			ServerRowSelectButton->OnClicked.AddDynamic(this, &UTServerRow::ServerRowSelectButtonClicked);
+		}
+		if (!ServerRowSelectButton->OnHovered.IsBound())
+		{
+			ServerRowSelectButton->OnHovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonHovered);
+		}
+		if (!ServerRowSelectButton->OnUnhovered.IsBound())
+		{
+			ServerRowSelectButton->OnUnhovered.AddDynamic(this, &UTServerRow::ServerRowSelectButtonUnhovered);
+		}
 	}
 	
 	SetServerRowData();
 }
 
 
-
-
 void UTServerRow::SetServerRowData()
 {
 	// Set the server name in the new server row entry. This is what the host named the server
 	FString ServerName;
-	ServerRowSearchResults.Session.SessionSettings.Get(SETTING_MAPNAME, ServerName);
-	SetServerNameText(FText::FromString(ServerName));
+	if (ServerRowSearchResults.Session.SessionSettings.Get(SETTING_MAPNAME, ServerName))
+	{
+		SetServerNameText(FText::FromString(ServerName));
+	}
 
 	// Set the server host name (Player name) in the new server row entry
 	SetServerHostUserName(FText::FromString(ServerRowSearchResults.Session.OwningUserName));
@@ -95,6 +104,7 @@ void UTServerRow::SetIsSelected(bool Selected)
 		SetServerRowTextColor(DefaultTextColor);
 	}
 }
+
 
 void UTServerRow::ServerRowSelectButtonClicked()
 {

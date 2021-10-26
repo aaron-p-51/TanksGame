@@ -6,10 +6,12 @@
 #include "Blueprint/UserWidget.h"
 #include "TDialogBaseWidget.generated.h"
 
+/** Forward declarations */
 class UTextBlock;
 
 
-UENUM()
+/** Input mode options */
+UENUM(BlueprintType)
 enum class EInputModeOnClose : uint8
 {
 	EIMOC_GameOnly	UMETA(DisplayName = "GameOnly"),
@@ -18,7 +20,8 @@ enum class EInputModeOnClose : uint8
 };
 
 /**
- * 
+ * Base class for all dialog widgets. Dialog widgets are pop up widgets that communicate
+ * errors or status to the player
  */
 UCLASS()
 class TANKS_API UTDialogBaseWidget : public UUserWidget
@@ -31,6 +34,14 @@ class TANKS_API UTDialogBaseWidget : public UUserWidget
 
 protected:
 
+	/** Widget that created/spawned this dialog widget */
+	UPROPERTY()
+	UUserWidget* SpawningWidget;
+
+	/** Input mode to return to player when this widget is removed from viewport */
+	UPROPERTY()
+	EInputModeOnClose InputModeOnWidgetClose;
+
 	/**************************************************************************/
 	/* Widgets */
 	/**************************************************************************/
@@ -41,12 +52,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* DetailsText;
 
-	UPROPERTY()
-	UUserWidget* SpawningWidget;
-	
-
-	UPROPERTY()
-	EInputModeOnClose InputModeOnWidgetClose;
 
 /**
  * Methods
@@ -71,11 +76,13 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	virtual void Configure(UUserWidget* DialogSpawningWidget, bool DisableInputToSpawningParent, EInputModeOnClose InputModeOnClose, const FText& DialogTitleText, const FText& DialogDetailsText);
 	
+	
 	/** Set the input mode for the local player controller to FInputModeUIOnly */
 	void SetUIInputMode();
 
 	/** Set the input mode for the local player controller to FInputModeGameOnly */
 	void SetGameInputMode();
 
+	/** Remove this dialog widget from the viewport, perform cleanup */
 	void RemoveWidget();
 };

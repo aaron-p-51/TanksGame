@@ -6,10 +6,11 @@
 #include "Blueprint/UserWidget.h"
 #include "TPlayerInLobby.generated.h"
 
+/** Forward declarations */
 class UTextBlock;
 
 /**
- * 
+ * Class for current players in game session. Used to populate UI for lobby menu in lobby map
  */
 UCLASS()
 class TANKS_API UTPlayerInLobby : public UUserWidget
@@ -36,8 +37,5 @@ protected:
 public:
 
 	void SetPlayerName(FText PlayerName);
-
-	FText GetPlayerName() const;
-
 
 };

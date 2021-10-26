@@ -7,7 +7,7 @@
 #include "TLobbyPlayerState.generated.h"
 
 /**
- * 
+ * Player State for multiplayer lobby map
  */
 UCLASS()
 class TANKS_API ATLobbyPlayerState : public APlayerState

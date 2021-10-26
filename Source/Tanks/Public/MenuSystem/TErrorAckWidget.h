@@ -6,13 +6,12 @@
 #include "TDialogBaseWidget.h"
 #include "TErrorAckWidget.generated.h"
 
-
+/** Forward declarations */
 class UButton;
 
 
-
 /**
- * 
+ * Widget that displays errors to the player. Widgets are closed manually by the player
  */
 UCLASS()
 class TANKS_API UTErrorAckWidget : public UTDialogBaseWidget
@@ -51,7 +50,7 @@ public:
 private:
 
 	/** Bind widget events */
-	bool BindWidgetEvents();
+	void BindWidgetEvents();
 	
 	/** Bound event called when Click event is called on @CloseButton */
 	UFUNCTION()

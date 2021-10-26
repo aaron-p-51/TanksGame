@@ -11,9 +11,10 @@ void UTDialogBaseWidget::Configure(UUserWidget* DialogSpawningWidget, bool Disab
 {
 	SetTitleText(DialogTitleText);
 	SetDetailsText(DialogDetailsText);
-	InputModeOnWidgetClose = InputModeOnClose;
 
+	InputModeOnWidgetClose = InputModeOnClose;
 	SpawningWidget = DialogSpawningWidget;
+
 	if (SpawningWidget && DisableInputToSpawningParent)
 	{
 		SpawningWidget->SetIsEnabled(false);
@@ -39,6 +40,7 @@ void UTDialogBaseWidget::SetDetailsText(const FText& Text)
 		DetailsText->SetText(Text);
 	}
 }
+
 
 void UTDialogBaseWidget::SetUIInputMode()
 {
@@ -71,11 +73,24 @@ void UTDialogBaseWidget::SetGameInputMode()
 	}
 }
 
+
 void UTDialogBaseWidget::RemoveWidget()
 {
-	if (InputModeOnWidgetClose == EInputModeOnClose::EIMOC_GameOnly)
+	// Return desired input mode to PlayerController
+	switch (InputModeOnWidgetClose)
 	{
-		SetGameInputMode();
+		case EInputModeOnClose::EIMOC_GameOnly:
+			SetGameInputMode();
+			break;
+		case EInputModeOnClose::EIMOC_UIOnly:
+			SetUIInputMode();
+			break;
+		case EInputModeOnClose::EIMOC_GameAndUI:
+			UE_LOG(LogTemp, Warning, TEXT("UTDialogBaseWidget::RemoveWidget - InputModeOnWidgetClose set to EIMOC_GameAndUI which is not implemented"))
+			// TODO: Not implemented, may not be needed in this game
+			break;
+		default:
+			break;
 	}
 
 	if (SpawningWidget)
