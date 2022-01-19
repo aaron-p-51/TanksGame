@@ -6,30 +6,38 @@
 // Engine Includes
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/RotatingMovementComponent.h"
 #include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystem.h"
+#include "Net/UnrealNetwork.h"
 
 // Game Includes
 #include "Pawns/TPlayerTank.h"
+#include "Items/TAirItemSpawner.h"
+#include "Items/TItemDropZone.h"
 
 // Sets default values
 ATPickupItem::ATPickupItem()
 {
 	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
-	if (SphereComp)
-	{
-		SetRootComponent(SphereComp);
-		SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		SphereComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		SphereComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Overlap);
-	}
+	SetRootComponent(SphereComp);
+	SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	SphereComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	SphereComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Overlap);
+	SphereComp->SetSphereRadius(75.f);
+
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
-	if (MeshComp)
-	{
-		MeshComp->SetupAttachment(GetRootComponent());
-		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
+	MeshComp->SetupAttachment(GetRootComponent());
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	MeshComp->CastShadow = 0;
+	
+
+	RotatingMovementComp = CreateDefaultSubobject<URotatingMovementComponent>(TEXT("RotatingMovementComp"));
+
+	bItemPickedUp = false;
 
 	SetReplicates(true);
 
@@ -50,24 +58,50 @@ void ATPickupItem::BeginPlay()
 
 void ATPickupItem::OnSphereCompBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor == nullptr) return;
-
-	auto PlayerTank = Cast<ATPlayerTank>(OtherActor);
+	ATPlayerTank* PlayerTank = Cast<ATPlayerTank>(OtherActor);
 	if (PlayerTank)
 	{
-		
-		// TODO: Only add health to player if not at max health
-		float PlayerCurrentHealth = PlayerTank->GetHealth();
-		if (PlayerCurrentHealth >= 99.9f)
+		bItemPickedUp = PlayerTank->PickupItem(ItemType, ItemQuantity);
+		if (bItemPickedUp)
 		{
-			return;
-		}
-		else
-		{ 
-			PlayerTank->GiveHealth(100.f);
-			Destroy();
+			if (AirItemSpawner)
+			{
+				AirItemSpawner->OnPickupItemPickupUp(this);
+			}
+
+			MulticastHealthPickupUp();
+			SetLifeSpan(1.f);	
 		}
 	}
 }
 
 
+void ATPickupItem::OnItemPickedUp()
+{
+	if (MeshComp)
+	{
+		MeshComp->SetVisibility(false, true);
+	}
+	if (SphereComp)
+	{
+		SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	SpawnPickupFX();
+}
+
+
+void ATPickupItem::SpawnPickupFX() const
+{
+	if (PickupParticles)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), PickupParticles, GetActorLocation(), GetActorRotation(), true);
+	}
+}
+
+
+void ATPickupItem::MulticastHealthPickupUp_Implementation()
+{
+	bItemPickedUp = true;
+	OnItemPickedUp();
+}

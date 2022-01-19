@@ -8,7 +8,7 @@
 #include "WheeledVehicle.h"
 #include "TPlayerTank.generated.h"
 
-
+/** Forward declarations */
 class USkeletalMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
@@ -22,9 +22,11 @@ class ATInstantWeapon;
 class ATProjectileWeapon;
 class UTBoostComponent;
 class UNiagaraComponent;
+class UTItemData;
 
-
+/** Declare delegate for when player changes weapon */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShootableWeaponChange, ATShootableWeapon*, NewWeapon);
+
 
 
 UENUM(BlueprintType)
@@ -51,143 +53,150 @@ class TANKS_API ATPlayerTank : public AWheeledVehicle, public ITShootableWeaponO
 
 public:
 
+	/** [Server + Client] Event called when player changes weapon */
 	UPROPERTY(BlueprintAssignable)
 	FOnShootableWeaponChange OnShootableWeaponChange;
 
-protected:
 
-
+private:
 
 	/**************************************************************************/
 	/* Components */
 	/**************************************************************************/
-
-	/** SkeletalMesh for tank Turret. Turret yaw will follow player yaw input */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
-	USkeletalMeshComponent* TurretMeshComp;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
-	USpringArmComponent* SpringArmComp;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(EditDefaultsOnly, Category = "Components")
 	UCameraComponent* CameraComp;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	/** Stabilize Camera's rotation (pitch and roll)  */
+	UPROPERTY(EditDefaultsOnly, Category = "Components")
+	USceneComponent* CameraGimbleComp;
+
+	/** SkeletalMesh for tank Turret. Turret yaw will follow player yaw input */
+	UPROPERTY(EditDefaultsOnly, Category = "Components")
+	USkeletalMeshComponent* TurretMeshComp;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Components")
+	USpringArmComponent* SpringArmComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UTHealthComponent* HealthComp;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(EditAnywhere, Category = "Components")
 	UTBoostComponent* BoostComp;
 
 	/** Continuous SFX for tank engine, sound will increase in pitch as speed increases  */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components | FX | SFX")
+	UPROPERTY(EditDefaultsOnly, Category = "Components | FX | SFX")
 	UAudioComponent* EngineAudioComp;
 
 	/** Continuous VFX for tank engine, spawn rate will increase as speed increases  */
 	UPROPERTY(EditDefaultsOnly, Category = "Components | FX | VFX")
 	UNiagaraComponent* EngineExhauseNiagaraComp;
 
-	UWheeledVehicleMovementComponent* VehicleMovementComp;
+
+	/**************************************************************************/
+	/* Configuration */
+	/**************************************************************************/
+
+	/** TODO: Implement Flip */
+	/*
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | FlipOver")
+	float MinRollToAllowFlip;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | FlipOver")
+	float MinPitchToAllowFlip;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | FlipOver")
+	FVector FlipImpulse;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | FlipOver")
+	FVector FlipCenterOfMass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | FlipOver")
+	float FlipTime;
+	*/
+
+	/** Prevent player from exceeding this pitch angle when changing look direction and rotation */
+	UPROPERTY(EditAnywhere, Category = "Configuration | Camera")
+	float MaxCameraPitchAngle;
+
+	/** Spring arm lengths used by this PlayerTank. Changing view will switch between these lengths */
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | Camera")
+	TArray<uint32> SpringArmLengths;
+
+	/** Socket name on TurretMesh where weapons should fire from, and where FX are spawned */
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration | Weapons")
+	FName WeaponAttachSocketName;
 
 
 	/**************************************************************************/
 	/* Weapon Inventory */
 	/**************************************************************************/
 
+	/** Class of all weapons this tank should spawn.  */
 	UPROPERTY(EditDefaultsOnly, Category = "Weapons")
 	TArray<TSubclassOf<ATShootableWeapon>> WeaponInventoryClasses;
 
-	UPROPERTY(Transient, Replicated)
+	/** Inventory of all ATShootableWeapon's will be an instnace of each class of WeaponInventoryClass */
+	UPROPERTY(Replicated)
 	TArray<ATShootableWeapon*> WeaponInventory;
 
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_CurrentWeapon)
+	/** Current weapon player has equipt */
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeapon)
 	ATShootableWeapon* CurrentWeapon;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapons")
-	FName WeaponAttachSocketName;
 
 
 	/**************************************************************************/
 	/* Effects */
 	/**************************************************************************/
 
+	/** Param name to control EngineAudioComp pitch */
 	UPROPERTY(EditDefaultsOnly, Category = "FX | SFX")
 	FName EngineAudioRPMParamName;
 
+	/** Param name to control EngineExhauseNiagaraComp spawn rate  */
 	UPROPERTY(EditDefaultsOnly, Category = "FX | VFX")
 	FName EngineExhaustSpawnRateParamName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | SFX")
+	/** SFX to play when this PlayerTank dies. */
+	UPROPERTY(EditDefaultsOnly, Category = "FX | SFX")
 	USoundBase* DeathSoundCue;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | VFX")
+	/** VFX to play when this PlayerTank dies */
+	UPROPERTY(EditDefaultsOnly, Category = "FX | VFX")
 	UParticleSystem* DeathExplosion;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | Camera")
+	 
+	/** When this PlayerTank dies play camera shake on owning players camera */
+	UPROPERTY(EditDefaultsOnly, Category = "FX | Camera")
 	TSubclassOf<UCameraShake> DeathCameraShake;
 
-	/** If damage taken in a single hit is larger than BigHitMinDamage BitHitCameraShake will be used */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | Camera")
+	/**
+	 * If damage taken in a single hit is larger than BigHitMinDamage BitHitCameraShake will play
+	 * on owning players camera
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "FX | Camera")
 	float BigHitMinDamage;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | Camera")
+	/** Camera shake to play if this PlayerTank receives a big hit. See BigHitMinDamage  */
+	UPROPERTY(EditDefaultsOnly, Category = "FX | Camera")
 	TSubclassOf<UCameraShake> BigHitCameraShake;
+
 
 	/**************************************************************************/
 	/* States */
 	/**************************************************************************/
 
-	UPROPERTY(ReplicatedUsing=OnRep_SetDesiredTurretYaw)
-	float DesiredTurretYaw;
-
-	UPROPERTY(ReplicatedUsing=OnRep_IsDead, VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_IsDead)
 	bool bIsDead;
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly)
-	bool bIsFlipping;
+	UPROPERTY(ReplicatedUsing=OnRep_PlayerSetTurretYaw)
+	float PlayerSetTurretYaw;
 
-
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere)
 	bool bInputApplyBoost;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "AI")
-	bool bAILookAtTarget;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "AI")
-	AActor* AILookAtTarget;
-
+	/** Current SpringArmLenth used in SpringArmLengths. See SpringArmLengths */
+	UPROPERTY(VisibleAnywhere, Category = "Configuration | Camera")
 	uint32 CurrentSpringArmLengthIndex;
-
-	UPROPERTY(EditDefaultsOnly)
-	TArray<uint32> SpringArmLengths;
-
-	/**************************************************************************/
-	/* Configuration */
-	/**************************************************************************/
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration | FlipOver")
-	float MinRollToAllowFlip;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration | FlipOver")
-	float MinPitchToAllowFlip;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration | FlipOver")
-	FVector FlipImpulse;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration | FlipOver")
-	FVector FlipCenterOfMass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Configuration | FlipOver")
-	float FlipTime;
-
-
-
-	UPROPERTY()
-	FVector DefaultCenterOfMass;
-
-
-
-
 
 
 /*
@@ -196,119 +205,196 @@ protected:
 public:
 	ATPlayerTank();
 
+public:
 
+	virtual void Tick(float DeltaTime) override;
 
+	/**************************************************************************/
+	/* Setup */
+	/**************************************************************************/
 
-	UFUNCTION(BlueprintCallable)
-	void GetWeaponFirePoint(FVector& FirePointLocation, FRotator& FirePointRotation, EFirePoint FirePoint = EFirePoint::EFP_PlayerCamera);
+private:
 
-	
-	virtual void GetShootableWeaponFirePoint(FVector& FireLocation, FRotator& FireRotation) override;
-
-
-	UFUNCTION(BlueprintCallable)
-	void GiveHealth(float Amount);
-
-	UFUNCTION(BlueprintCallable)
-	float GetMaxHealth() const;
-
-	UFUNCTION(BlueprintCallable)
-	float GetHealth() const;
-
-	UFUNCTION()
-	UTHealthComponent* GetHealthComponent() const { return HealthComp; }
-
-	UFUNCTION(BlueprintCallable)
-	void EnableAILookAtTarget(bool Enable, AActor* Target);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE bool IsAILookAtTargetEnabled() const {return bAILookAtTarget;}
-
-
-	/**
-	 * TODO: Verify Interface is really needed for these three functions
-	 */
-	virtual void StartFire_Implementation() override;
-	virtual void StopFire_Implementation() override;
-	virtual bool IsFiring_Implementation() override;
-
-	void WeaponReload();
-
-
-	UFUNCTION(BlueprintCallable)
-	EShootableWeaponType GetEquipedWeaponType() const;
-
-
-	UFUNCTION(BlueprintCallable)
-	ATShootableWeapon* GetCurrentWeapon() const;
-
-	FORCEINLINE FName GetWeaponSocketName() const { return WeaponAttachSocketName; }
-
-	FORCEINLINE USkeletalMeshComponent* GetTurretMeshComp() const { return TurretMeshComp; }
-
+	/** spawn inventory, setup initial variables */
+	virtual void PostInitializeComponents() override;
 
 protected:
 
 	virtual void BeginPlay() override;
 
+private:
+	
+	/** [Server] Bind to member components events */
+	void BindToComponentEvents();
+
+	/** [Client] Stabilize camera, camera will not change its pitch or roll based on its attachment rotation */
+	void StabilizeCameraGimble();
+
+	/** [Client] Set starting spring arm length for camera. Will be first entry in SpringArmLengths TArray */
+	void SetInitialSpringArmLength();
+
+	/**************************************************************************/
+	/* Weapon */
+	/**************************************************************************/
+
+public:
+
+	/**
+	 * [Server + Client] Get the location and rotation, out params, of where the fire point in for this ATPlayerTank.
+	 * Line trace weapons will use player camera, projectile weapons will use TurretMeshComp's BarrelSocket.
+	 * 
+	 * TODO: More robust system for line trace weapons. Line trace should also trance from TurretMeshComp's BarrelSocket
+	 * to esnure the hit location. prevent blocking hits from obsticels between camera and this ATPlayerTank.
+	 */
+	virtual void GetShootableWeaponFirePoint(FVector& FireLocation, FRotator& FireRotation) override;
+
+	/** [Server + Client] Get Weapon attachment */
+	virtual USceneComponent* GetAttachmentSceneComponent() override { return TurretMeshComp; }
+	virtual FName GetAttachmentSocketName() override { return WeaponAttachSocketName; }
+
+	/** [Client] Use current weapon */
+	virtual void StartFire_Implementation() override;
+	virtual void StopFire_Implementation() override;
+	virtual bool IsFiring_Implementation() override;
+	virtual void Reload_Implementation() override;
+	
+	/** [Server + Client] Weapon Type either Instant, or projectile */
+	UFUNCTION(BlueprintCallable)
+	EShootableWeaponType GetEquipedWeaponType() const;
+
+	/** [Server + Client] Get current weapon from WeaponInventory use by player */
+	UFUNCTION(BlueprintCallable)
+	ATShootableWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
+
+	
+	/**************************************************************************/
+	/* Health */
+	/**************************************************************************/
+
+	/** Get reference to HealthComponent */
+	UFUNCTION()
+	UTHealthComponent* GetHealthComponent() const { return HealthComp; }
+
+	/** [Server] Give health to this player tank. Returns actual amount of health this player tank took */
+	UFUNCTION(BlueprintCallable)
+	float GiveHealth(float Amount);
+
+	/** [Server + Client] Get the Max heath this player tank can have */
+	UFUNCTION(BlueprintCallable)
+	float GetMaxHealth() const;
+
+	/** [Server + Client] Get the current health of this player tank */
+	UFUNCTION(BlueprintCallable)
+	float GetHealth() const;
 
 
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	/** [Server] Bound to HealthComponents OnHealthChange Event. Will trigger when HealthComp's health value changes */
+	UFUNCTION()
+	void OnHealthCompHealthChange(float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* HealthChangeCauser);
+
+
+	/**************************************************************************/
+	/* Boost */
+	/**************************************************************************/
+
+
+public:
+
+	UFUNCTION()
+	UTBoostComponent* GetBoostComponent() const { return BoostComp; }
+
+	UFUNCTION(BlueprintCallable)
+	float GetBoost() const;
+
+	UFUNCTION(BlueprintCallable)
+	float GetMaxBoost() const;
+
+
+public:
+	UFUNCTION()
+	void OnBoostComponentBoostChange(float Boost, bool UsingBoost);
+
 
 	/*************************************************************************/
 	/* Weapon Inventory */
 	/*************************************************************************/
 
-	void SpawnDefaultInventory();
+private:
 
+	/**
+	 * [Server] Spawn an instance of every weapon in WeaponInventoryClasses. Each weapon will be added to
+	 * WeaponInventory. WeaponInventory is replicated to owning client.
+	 */
+	void SpawnDefaultWeaponInventory();
+
+	/**
+	 * [Server] Add Weapon to WeaponInventory. Only adds to WeaponInventory if Weapon is unique to other
+	 * Weapons currently in WeaponInventory. 
+	 */
 	void AddWeapon(ATShootableWeapon* Weapon);
 
+	/** [Server + Client] Equip Weapon.  Weapon must be in WeaponInventory. */
 	void EquipWeapon(ATShootableWeapon* Weapon);
 
-	void SwitchToNextWeapon();
-
-	void SwitchToPreviousWeapon();
-
-	void FlipUpright();
-
-	UFUNCTION(Server, Reliable)
-	void ServerFlipUpright();
-
-	FTimerHandle TimerHandle_FlipOver;
-
-	void FlipTimerComplete();
-
-
+	/** Server RPC to equip weapon. Calls EquipWeapon on server. */
 	UFUNCTION(Server, Reliable)
 	void ServerEquipWeapon(ATShootableWeapon* Weapon);
 
+	/** [Client] Switch to next weapon in WeaponInventory. Will cause next weapon in WeaponInventory to be equipped. */
+	void SwitchToNextWeapon();
+
+	/** [Client] Switch to previous weapon in WeaponInventory. Will cause previous weapon in WeaponInventoryto be equipped. */
+	void SwitchToPreviousWeapon();
+
+	/** [Server + Client] Sets the NewWeapon as current Weapon */
 	void SetCurrentWeapon(ATShootableWeapon* NewWeapon, ATShootableWeapon* PreviousWeapon);
 
+	/** [Server + Client] Broadcasts OnShootableWeaponChage event*/
 	UFUNCTION()
 	void OnRep_CurrentWeapon(ATShootableWeapon* LastWeapon);
+
+	/**
+	 * Server RPC to set AutonomousProxy's camera position and rotation on server. Position is used for weapon line trace's to determine hits
+	 * 
+	 * TODO: Currently this RPC is called on tick. Make this call only happen when player is firing weapon.
+	 */
+	UFUNCTION(Server, Unreliable)
+	void ServerSetCameraForWeaponFire(FVector Pos, FRotator Rot);
+
+
+	/** [Server + Client] Returns first ATShootableWeapon in WeaponInventory that uses ItemType */
+	ATShootableWeapon* FindFirstWeaponUsesItem(EItemType ItemType) const;
+
 
 	/*************************************************************************/
 	/* Player Input */
 	/*************************************************************************/
 
-	/** [Client] Move tank forward */
+protected:
+
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+private:
+
+	/** [Client] Move tank forward using Throttle Input on VehicleMovementComponent */
 	void MoveForward(float Value);
 
-	/** [Client] Steering input for tank */
+	/** [Client] Steer the tank using Steering Input on VehicleMovementComponent */
 	void MoveRight(float Value);
 
-	/** [Client] Rotate tank turret */
+	/** [Client] Rotate Player View. Calculate and SprintArmComp rotation based on Value. Rotate TurretMeshComp  */
+	/**
+	 * [Client] Rotate Player View. Calculate and SprintArmComp rotation based on Value. Rotate TurretMeshComp based
+	 * on the SprintArmComp's rotation. Calls ServerSetTurretYaw RPC to set TurretMeshComp on simulated proxies
+	 */
 	void LookRight(float Value);
 
-	/** [Server] Set local controlled tank turret rotation on server */
-	UFUNCTION(Server, Unreliable)
-	void ServerSetDesiredTurretYaw(float YawValue);
-
-	/** [Client] Aim up/down */
+	/** [Client] Rotate Player View. Calculate and SprintArmComp rotation based on Value. */
 	void LookUp(float Value);
 
-	/** [Client] Change camera distance from tank*/
+	/** [Client] Change camera distance from tank. Will change to next value in SpringArmLengths*/
 	void ChangeCameraView();
+
 
 	/** [Client] Start using boost */
 	UFUNCTION()
@@ -318,69 +404,64 @@ protected:
 	UFUNCTION()
 	void StopUseBoost();
 
+	void FlipUpright();
 
+	/** [Client] Calls StartFire_Implementation. See StartFire_Implementation */
+	void StartUseWeapon();
+
+	/** [Client] Calls StopFire_Implementation. See StopFire_Implementation */
+	void StopUseWeapon();
+
+	/** [Client] Calls Reload_Implementation. See Reload_Implementation */
+	void WeaponReload();
+
+	/*************************************************************************/
+	/* State */
+	/*************************************************************************/
 
 	UFUNCTION()
 	void OnRep_IsDead();
 
 	void PlayDeathFX();
 	
-	void InformControllerHealthChange(class AController* InstigatedBy, float NewHealth, float HealthDelta, bool IsDead);
+	bool CanFlipOver() const;
 
-	void PlayCameraShake(TSubclassOf<UCameraShake> CameraShakeClass);
+	/** [Server + Client] Get GetVehicleMovementComponent's engine RPM */
+	float GetEngineRotationSpeed() const;
+
+	/** [Client] Set TurretComp's relative yaw on Simulated Proxies */
+	UFUNCTION()
+	void OnRep_PlayerSetTurretYaw();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetTurretYaw(float Value);
 	
+	/*************************************************************************/
+	/* FX */
+	/*************************************************************************/
+
+	/** [Client] Player camera shake on owners Camera */
+	void PlayCameraShake(TSubclassOf<UCameraShake> CameraShakeClass);
+
+	/** [Client] Set pitch of EngineAudioComp based on VehicleMovementComponent's engine RPM */
 	void SetEngineAudioFromRotationSpeed();
 
+	/** [Client] Set spawn rate of EngineExhauseNiagaraComp based on VehicleMovementComponent's engine RPM */
 	void SetEngineExhaustFromRotationSpeed();
-	
 
-
-	UFUNCTION()
-	void OnRep_SetDesiredTurretYaw();
-
-	/** [Server] Delegate triggered from Health Component broadcast */
-	UFUNCTION()
-	void OnHealthCompHealthChange(UTHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* HealthChangeCauser);
-
-
-	UFUNCTION()
-	void OnBoostComponentBoostChange(float Boost, bool UsingBoost);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void BP_DebugBoostApplied(float Boost, bool UsingBoost);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void BP_SetThrottleTest(float Value);
-
-
-
-
-
-	
-
+protected:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EventSpawnFloatingText(AController* InstigatedBy, float Damage);
 
-	/** Used to Get Fire Position, TODO: if fails from Reliable buffer overflow change approach */
-	UFUNCTION(Server, Reliable)
-	void ServerSetSpringArmRotation(FVector Value);
 
-	
-	
+	/*************************************************************************/
+	/* Items */
+	/*************************************************************************/
+public:
 
-
-
-private:
-
-	virtual void Tick(float DeltaTime) override;
-
-	void AIRotateTurretToFaceTarget();
-
-	/** spawn inventory, setup initial variables */
-	virtual void PostInitializeComponents() override;
-
-	bool CanFlipOver() const;
+	/** [Server] Pickup item and try to apply its Quantity. Returns true if able to use item */
+	bool PickupItem(EItemType ItemType, int32 Quantity);
 
 
 };

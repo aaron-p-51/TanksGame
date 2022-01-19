@@ -61,6 +61,7 @@ int32 UTBallisticsCalculator::SolveQuadric(double C0, double C1, double C2, doub
 	}
 }
 
+
 int UTBallisticsCalculator::SolveCubic(double C0, double C1, double C2, double C3, double& S0, double& S1, double& S2)
 {
 	if (C0 == 0.0)
@@ -133,6 +134,7 @@ int UTBallisticsCalculator::SolveCubic(double C0, double C1, double C2, double C
 
 	return num;
 }
+
 
 int UTBallisticsCalculator::SolveQuartic(double C0, double C1, double C2, double C3, double C4, double& S0, double& S1, double& S2, double& S3)
 {

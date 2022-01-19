@@ -11,9 +11,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundBase.h"
+
+
 
 
 // Sets default values
@@ -22,41 +27,35 @@ ATProjectile::ATProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
-	if (CollisionComp)
-	{
-		SetRootComponent(CollisionComp);
-		CollisionComp->SetCollisionProfileName(TEXT("Projectile"));
-		CollisionRadius = CollisionComp->GetScaledSphereRadius();
-	}
-
+	SetRootComponent(CollisionComp);
+	CollisionComp->SetCollisionProfileName(TEXT("Projectile"));
+	CollisionRadius = CollisionComp->GetScaledSphereRadius();
+	
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
-	if (MeshComp)
-	{
-		MeshComp->SetupAttachment(GetRootComponent());
-		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
-
+	MeshComp->SetupAttachment(GetRootComponent());
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 	TrailEffectComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("TrailEffectComp"));
-	if (TrailEffectComp && MeshComp)
-	{
-		TrailEffectComp->SetupAttachment(GetRootComponent());
-	}
+	TrailEffectComp->SetupAttachment(GetRootComponent());
+
+	NiagaraTrailEffectComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraTrailEffectComp"));
+	NiagaraTrailEffectComp->SetupAttachment(GetRootComponent());
 
 	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 
 	ProjectileSFX = CreateDefaultSubobject<UAudioComponent>(TEXT("ProjectileSFX"));
-	if (ProjectileSFX)
-	{
-		ProjectileSFX->SetupAttachment(GetRootComponent());
-		ProjectileSFX->bAutoActivate = false;
-	}
-
+	ProjectileSFX->SetupAttachment(GetRootComponent());
+	ProjectileSFX->bAutoActivate = false;
+	
 	DamageAmount = 30.f;
 	DamageRadius = 300.f;
 	bHitDetected = false;
 
+	bFadeOutTrailEffect = true;
+
+	ImpactEffectFXScale = 1.f;
+
 	SetReplicates(true);
-	
 }
 
 
@@ -79,6 +78,8 @@ void ATProjectile::BeginPlay()
 // Called every frame
 void ATProjectile::Tick(float DeltaTime)
 {
+	Super::Tick(DeltaTime);
+
 	if (bHitDetected) return;
 
 	CurrentWorldLocation = GetActorLocation();
@@ -86,12 +87,15 @@ void ATProjectile::Tick(float DeltaTime)
 	if (DetectHit(HitResult))
 	{
 		bHitDetected = true;
+		FHitResult StopSimulatingHitResult;
+		ProjectileMovementComp->StopSimulating(StopSimulatingHitResult);
 		EmitOnHitEffects(HitResult.Location);
+		
 
 		if (GetLocalRole() == ENetRole::ROLE_Authority)
 		{
-			ApplyDamage(HitResult);
 			TearOff();
+			ApplyDamage(HitResult);
 		}
 
 		HandleDestruction();
@@ -115,7 +119,7 @@ bool ATProjectile::DetectHit(FHitResult& HitResult)
 		PreviousWorldLocation,
 		CurrentWorldLocation,
 		CollisionRadius,
-		UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_WorldDynamic),
+		UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility),
 		false,
 		IgnoreActors,
 		EDrawDebugTrace::None,
@@ -131,7 +135,12 @@ void ATProjectile::EmitOnHitEffects(const FVector& Location) const
 {
 	if (ImpactEffect)
 	{
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, Location);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactEffect, Location, FRotator::ZeroRotator, FVector(ImpactEffectFXScale));
+	}
+
+	if (NiagaraImpactEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), NiagaraImpactEffect, Location, FRotator::ZeroRotator, FVector(ImpactEffectFXScale));
 	}
 
 	if (ProjectileImpactSFX)

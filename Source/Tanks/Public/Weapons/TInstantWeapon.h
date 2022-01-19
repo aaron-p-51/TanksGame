@@ -114,8 +114,7 @@ public:
 
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+
 
 	/** [Server + Client] Player input fire weapon */
 	virtual void FireWeapon() override;

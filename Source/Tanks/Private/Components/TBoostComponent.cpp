@@ -20,7 +20,6 @@ UTBoostComponent::UTBoostComponent()
 	RechargeRate = 8.f;
 	RechargeDelay = 4.f;
 	BoostState = EBoostState::EBS_Charged;
-
 }
 
 
@@ -34,6 +33,7 @@ void UTBoostComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		UpdateBoostLevel(DeltaTime);
 	}	
 }
+
 
 void UTBoostComponent::UpdateBoostLevel(float DeltaTime)
 {

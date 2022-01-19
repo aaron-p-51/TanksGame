@@ -12,6 +12,8 @@ class UProjectileMovementComponent;
 class UParticleSystem;
 class USoundBase;
 class UAudioComponent;
+class UNiagaraSystem;
+class UNiagaraComponent;
 
 UCLASS()
 class TANKS_API ATProjectile : public AActor
@@ -43,6 +45,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components | VFX")
 	UParticleSystemComponent* TrailEffectComp;
 
+	/** VFX for projectile trail, will deactivate when collision detected */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components | VFX")
+	UNiagaraComponent* NiagaraTrailEffectComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components | VFX")
+	bool bFadeOutTrailEffect;
+
 
 	/**************************************************************************/
 	/* FX */
@@ -52,6 +61,12 @@ protected:
 	/** VFX when Collision detected */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | VFX")
 	UParticleSystem* ImpactEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | VFX")
+	UNiagaraSystem* NiagaraImpactEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX | VFX")
+	float ImpactEffectFXScale;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FX | SFX")
 	UAudioComponent* ProjectileSFX;

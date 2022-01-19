@@ -12,7 +12,6 @@
 // Game Includes
 #include "Pawns/TPlayerTank.h"
 #include "Weapons/TProjectile.h"
-#include "Components/TAIFireProjectile.h"
 #include "TShootableWeaponOwner.h"
 
 ATProjectileWeapon::ATProjectileWeapon()

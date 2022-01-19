@@ -46,10 +46,10 @@ class TANKS_API ATLobbyGameState : public AGameState
 /**
  * Members
  */
-protected:
+private:
 
 	/** Multiplayer session settings data */
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(Replicated)
 	FLobbyData LobbyData;
 
 

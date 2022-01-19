@@ -27,8 +27,11 @@ public:
 	UFUNCTION()
 	virtual void GetShootableWeaponFirePoint(FVector& FireLocation, FRotator& FireRotation) = 0;
 
-	//UFUNCTION()
-	//virtual FVector GetShotDirection(FVector FireLocation, FRotator FireRotation) = 0;
+	UFUNCTION()
+	virtual class USceneComponent* GetAttachmentSceneComponent() = 0;
+
+	UFUNCTION()
+	virtual FName GetAttachmentSocketName() = 0;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void StartFire();
@@ -38,6 +41,9 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool IsFiring();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void Reload();
 
 	
 };

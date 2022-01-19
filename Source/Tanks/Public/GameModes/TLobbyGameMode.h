@@ -22,16 +22,19 @@ class TANKS_API ATLobbyGameMode : public AGameMode
 /**
  * Members
  */
-protected:
+private:
 
-	/** Timer to update session data to each player, used as slower rate tick */
+	/** Timer to update date in LobbyGameState, used as slower rate tick */
 	FTimerHandle TimerHandle_DefaultTick;
 
 	/** Timer to manage loading the next map once start criteria has been meet */
 	FTimerHandle TimerHandle_LoadNextMap;
 
-	/** Timer duration for TimerHandle_LoadNextMap */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lobby")
+	/**
+	 * Timer duration for TimerHandle_LoadNextMap. After match starting criteria is meet delay for this amount of time.
+	 * Allows player widgets to display count down
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
 	float WaitTimeAfterIsReadyToStart;
 
 	/** Players currently in the session */
@@ -88,7 +91,7 @@ public:
 
 	ATLobbyGameMode();
 
-	/** Update  @PlayerCount */
+	/** Update  PlayerCount */
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Player/TBasePlayerState.h"
+#include "Player/TMultiplayerBasePlayerState.h"
 #include "TDeathmatchPlayerState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TANKS_API ATDeathmatchPlayerState : public ATBasePlayerState
+class TANKS_API ATDeathmatchPlayerState : public ATMultiplayerBasePlayerState
 {
 	GENERATED_BODY()
 	

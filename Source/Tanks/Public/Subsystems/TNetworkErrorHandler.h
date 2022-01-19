@@ -15,12 +15,6 @@ class TANKS_API UTNetworkErrorHandler : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 
-/**
- * Members
- */
-
-
-
  /**
   * Methods
   */

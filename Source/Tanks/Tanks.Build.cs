@@ -8,7 +8,7 @@ public class Tanks : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Niagara", "UMG", "OnlineSubsystem", "OnlineSubsystemSteam", "OnlineSubsystemNull", "OnlineSubsystemUtils", "AIModule", "TMWEventAggregator", "SlateCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Niagara", "UMG", "OnlineSubsystem", "OnlineSubsystemSteam", "OnlineSubsystemNull", "OnlineSubsystemUtils", "AIModule", "SlateCore" });
 
 		//PrivateDependencyModuleNames.AddRange(new string[] {  });
 

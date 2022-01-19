@@ -13,35 +13,21 @@
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
 #include "AIController.h"
-
+#include "Kismet/KismetSystemLibrary.h"
 
 
 // Game Includes
 #include "Pawns/TPlayerTank.h"
 #include "Tanks/Tanks.h"
-#include "AI/TTankAIVehicleController.h"
-#include "AI/TBaseAIController.h"
 #include "TShootableWeaponOwner.h"
-
-const static FName AUDIO_SURFACE_SELECTOR = TEXT("AudioSurfaceSelector");
-
-const static int32 AUDIO_SURFACE_DEFAULT = 0;
-const static int32 AUDIO_SURFACE_DEFAULT_METAL = 1;
 
 
 ATInstantWeapon::ATInstantWeapon()
 {
-
 	LineTraceDistance = 10000.0f;
 	SetReplicates(true);
 
 	ShootableWeaponType = EShootableWeaponType::ESWT_Instant;
-}
-
-
-void ATInstantWeapon::BeginPlay()
-{
-	Super::BeginPlay();
 }
 
 
@@ -101,6 +87,13 @@ void ATInstantWeapon::SetLineTraceEndPoints(FVector& LineTraceStart, FVector& Li
 }
 
 
+FVector ATInstantWeapon::ApplyBulletSpread(const FVector& ShotDirection) const
+{
+	// Bullet spread should be small (ie less than 3) see @BulletSpread
+	float HalfRad = FMath::DegreesToRadians(BulletSpread);
+	return FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+}
+
 
 bool ATInstantWeapon::WeaponFireLineTrace(FHitResult& HitResult, const FVector& LineTraceStart, const FVector& LineTraceEnd) const
 {
@@ -113,25 +106,7 @@ bool ATInstantWeapon::WeaponFireLineTrace(FHitResult& HitResult, const FVector& 
 	CollisionQueryParams.bTraceComplex = true;
 	CollisionQueryParams.bReturnPhysicalMaterial = true;
 	
-
-	bool result = GetWorld()->LineTraceSingleByChannel(HitResult, LineTraceStart, LineTraceEnd, ECC_Visibility, CollisionQueryParams);
-
-	bool temp = UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get()) == EPhysicalSurface::SurfaceType2;
-	if (temp)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Hit Grass"));
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Hit %d"), UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get()));
-	return result;
-}
-
-
-FVector ATInstantWeapon::ApplyBulletSpread(const FVector& ShotDirection) const
-{
-	// Bullet spread should be small (ie less than 3) see @BulletSpread
-	float HalfRad = FMath::DegreesToRadians(BulletSpread);
-	return FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+	return GetWorld() && GetWorld()->LineTraceSingleByChannel(HitResult, LineTraceStart, LineTraceEnd, ECC_Visibility, CollisionQueryParams);
 }
 
 

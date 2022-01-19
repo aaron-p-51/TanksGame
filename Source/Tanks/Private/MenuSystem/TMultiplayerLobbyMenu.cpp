@@ -159,7 +159,7 @@ void UTMultiplayerLobbyMenu::OnCancelQuitButtonClick()
 void UTMultiplayerLobbyMenu::OnEndSessionComplete(bool Successful)
 {
 	UE_LOG(LogTemp, Warning, TEXT("UMInGameMenu::OnEndSessionComplete, Success = %d"), Successful);
-	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MainMenu", true);
+	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MainMenu_New", true);
 }
 
 

@@ -5,7 +5,7 @@
 			"app_key": "application.generated.ue.tanks-14469661.ue4editor.exe",
 			"launch_type": "url",
 			"url": "steam://launch/",
-			"action_manifest_path": "U:/Dev/Projects/Tanks/Config/SteamVRBindings/steamvr_manifest.json",
+			"action_manifest_path": "E:/GameDev/Unreal Projects/TanksGame/Config/SteamVRBindings/steamvr_manifest.json",
 			"strings":
 			{
 				"en_us":

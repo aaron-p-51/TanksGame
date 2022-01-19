@@ -442,7 +442,7 @@ void UTMainMenu::HostOpenLevelAfterSessionStart()
 {
 	TearDown();
 
-	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MultiplayerLobby", true, "listen");
+	UGameplayStatics::OpenLevel(GetWorld(), "/Game/Tanks/Map/MultiplayerLobby_New", true, "listen");
 }
 
 

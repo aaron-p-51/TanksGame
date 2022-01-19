@@ -34,8 +34,6 @@ ATShootableWeapon::ATShootableWeapon()
 		FirePoint->SetupAttachment(GetRootComponent());
 	}
 
-
-
 	RateOfFire = 600.0f;
 	bWantsToFire = false;
 	bWantsToReload = false;
@@ -46,18 +44,13 @@ ATShootableWeapon::ATShootableWeapon()
 	SetReplicates(true);
 	MinNetUpdateFrequency = 33.0f;
 	NetUpdateFrequency = 66.0f;
-	//LastFireTime = 1;
-
-
 
 	ShootableWeaponType = EShootableWeaponType::ESWT_DefaultMax;
-
-
-
 }
 
-
-
+/**************************************************************************/
+/* Setup */
+/**************************************************************************/
 // Called when the game starts or when spawned
 void ATShootableWeapon::BeginPlay()
 {
@@ -67,12 +60,75 @@ void ATShootableWeapon::BeginPlay()
 }
 
 
+void ATShootableWeapon::SetOwningPawn(APawn* NewOwner)
+{
+	if (NewOwner != MyPawn && GetLocalRole() == ENetRole::ROLE_Authority)
+	{
+		SetInstigator(NewOwner);
+		MyPawn = NewOwner;
+		SetOwner(NewOwner);
+	}
+}
 
 
+void ATShootableWeapon::OnEquip()
+{
+	AttachMeshToPawn();
+}
+
+void ATShootableWeapon::AttachMeshToPawn()
+{
+	if (MyPawn)
+	{
+		ITShootableWeaponOwner* ShootableWeaponOwner = Cast<ITShootableWeaponOwner>(MyPawn);
+		if (ShootableWeaponOwner)
+		{
+			OwnersAttachToSceneComp = ShootableWeaponOwner->GetAttachmentSceneComponent();
+			OwnersAttachToSocketName = ShootableWeaponOwner->GetAttachmentSocketName();
+			if (OwnersAttachToSceneComp)
+			{
+				GetRootComponent()->AttachToComponent(OwnersAttachToSceneComp, FAttachmentTransformRules::KeepRelativeTransform, OwnersAttachToSocketName);
+			}
+		}
+
+		// TODO: If there is a MeshComp for weapon then enable its visibility
+	}
+}
+
+
+void ATShootableWeapon::OnEnterInventory(APawn* NewOwner)
+{
+	if (GetLocalRole() == ENetRole::ROLE_Authority)
+	{
+		SetOwningPawn(NewOwner);
+	}
+}
+
+
+void ATShootableWeapon::OnLeaveInventory()
+{
+
+}
+
+
+void ATShootableWeapon::OnRep_MyPawn()
+{
+	if (MyPawn)
+	{
+		OnEnterInventory(MyPawn);
+	}
+	else
+	{
+		OnLeaveInventory();
+	}
+}
+
+
+/**************************************************************************/
+/* Weapon Usage (Player Input) */
+/**************************************************************************/
 void ATShootableWeapon::StartFire()
 {
-	UE_LOG(LogTemp, Warning, TEXT("TShootableWeapon StartFire"));
-
 	if (GetLocalRole() < ENetRole::ROLE_Authority)
 	{
 		ServerStartFire();
@@ -100,8 +156,6 @@ bool ATShootableWeapon::ServerStartFire_Validate()
 
 void ATShootableWeapon::StopFire()
 {
-	UE_LOG(LogTemp, Warning, TEXT("TShootableWeapon StopFire"));
-
 	if (GetLocalRole() < ENetRole::ROLE_Authority)
 	{
 		ServerStopFire();
@@ -113,8 +167,6 @@ void ATShootableWeapon::StopFire()
 		DetermineCurrentWeaponState();
 	}
 }
-
-
 
 
 void ATShootableWeapon::ServerStopFire_Implementation()
@@ -141,13 +193,15 @@ void ATShootableWeapon::Reload()
 }
 
 
-
 void ATShootableWeapon::ServerReload_Implementation()
 {
 	Reload();
 }
 
 
+/**************************************************************************/
+/* Weapon State */
+/**************************************************************************/
 void ATShootableWeapon::DetermineCurrentWeaponState()
 {
 	EShootableWeaponState NewState = EShootableWeaponState::ESWS_Idle;
@@ -178,12 +232,12 @@ void ATShootableWeapon::SetCurrentWeaponState(EShootableWeaponState NewState)
 		ReloadStarted();
 		CurrentState = EShootableWeaponState::ESWS_Reloading;
 	}
-	if (OldState == EShootableWeaponState::ESWS_Firing && NewState != EShootableWeaponState::ESWS_Firing)
+	else if (OldState == EShootableWeaponState::ESWS_Firing && NewState != EShootableWeaponState::ESWS_Firing)
 	{
-		 CurrentState = EShootableWeaponState::ESWS_Idle;
-		BurstFireFinished();	
+		CurrentState = EShootableWeaponState::ESWS_Idle;
+		BurstFireFinished();
 	}
-	if (OldState != EShootableWeaponState::ESWS_Firing && NewState == EShootableWeaponState::ESWS_Firing)
+	else if (OldState != EShootableWeaponState::ESWS_Firing && NewState == EShootableWeaponState::ESWS_Firing)
 	{
 		CurrentState = EShootableWeaponState::ESWS_Firing;
 		BurstFireStarted();
@@ -196,38 +250,9 @@ void ATShootableWeapon::SetCurrentWeaponState(EShootableWeaponState NewState)
 }
 
 
-void ATShootableWeapon::OnLeaveInventory()
-{
-
-}
-
-void ATShootableWeapon::OnRep_MyPawn()
-{
-	if (MyPawn)
-	{
-		OnEnterInventory(MyPawn);
-	}
-	else
-	{
-		OnLeaveInventory();
-	}
-}
-
-void ATShootableWeapon::AttachMeshToPawn()
-{
-	if (!MyPawn) return;
-
-	GetRootComponent()->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
-	
-
-	FName AttachSocketName = MyPawn->GetWeaponSocketName();
-	USkeletalMeshComponent* AttachMeshComp = MyPawn->GetTurretMeshComp();
-	if (AttachMeshComp)
-	{
-		GetRootComponent()->AttachToComponent(AttachMeshComp, FAttachmentTransformRules::KeepRelativeTransform, AttachSocketName);
-	}
-}
-
+/**************************************************************************/
+/* Weapon Fire */
+/**************************************************************************/
 void ATShootableWeapon::BurstFireStarted()
 {
 	const float GameTime = GetWorld()->GetTimeSeconds();
@@ -239,35 +264,6 @@ void ATShootableWeapon::BurstFireStarted()
 	{
 		HandleWeaponFiring();
 	}
-}
-
-
-void ATShootableWeapon::BurstFireFinished()
-{
-	GetWorldTimerManager().ClearTimer(TimerHandle_HandleFiring);
-	BurstFireCounter = 0;
-	TimerIntervalAdjustment = 0.0f;
-}
-
-
-bool ATShootableWeapon::CanFire() const
-{
-	return bWantsToFire;
-}
-
-
-void ATShootableWeapon::HandleReFireWeapon()
-{
-	UWorld* World = GetWorld();
-
-	float SlackTimeThisFrame = FMath::Max(0.0f, (World->TimeSeconds - LastFireTime) - TimeBetweenShots);
-
-	if (bAllowAutomaticWeaponCatchup)
-	{
-		TimerIntervalAdjustment -= SlackTimeThisFrame;
-	}
-
-	HandleWeaponFiring();
 }
 
 
@@ -308,7 +304,6 @@ void ATShootableWeapon::HandleWeaponFiring()
 			BurstFireFinished();
 		}
 
-
 		if (MyPawn && MyPawn->IsLocallyControlled())
 		{
 			// local client tell server it wants to fire
@@ -330,9 +325,7 @@ void ATShootableWeapon::HandleWeaponFiring()
 		}
 	}
 
-
 	LastFireTime = GetWorld()->GetTimeSeconds();
-	
 }
 
 
@@ -351,38 +344,41 @@ bool ATShootableWeapon::ServerHandleWeaponFiring_Validate()
 }
 
 
+void ATShootableWeapon::HandleReFireWeapon()
+{
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		float SlackTimeThisFrame = FMath::Max(0.0f, (World->TimeSeconds - LastFireTime) - TimeBetweenShots);
+
+		if (bAllowAutomaticWeaponCatchup)
+		{
+			TimerIntervalAdjustment -= SlackTimeThisFrame;
+		}
+
+		HandleWeaponFiring();
+	}
+}
+
+
 void ATShootableWeapon::SimulateWeaponFire()
 {
-	
-	FVector MuzzleFlashLocation;
-	FRotator MuzzleFlashRotation;
+	PlayWeaponFireVFX();
+	PlayWeaponFireSFX();
+}
 
-	if (MeshComp && FirePoint)
-	{
-		MuzzleFlashLocation = FirePoint->GetComponentLocation();
-		MuzzleFlashRotation = FirePoint->GetComponentRotation();
-	}
-	else
-	{
-		MuzzleFlashLocation = GetActorLocation();
-		MuzzleFlashRotation = GetActorRotation();
-	}
 
-	if (MuzzleFlash)
-	{
-		auto compNiagara = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), MuzzleFlash, MuzzleFlashLocation, MuzzleFlashRotation, FVector(5.0f));
-		compNiagara->SetOnlyOwnerSee(false);
-	}
-	else if (MuzzleFlash_Particles)
-	{
-		auto compPart = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash_Particles, MuzzleFlashLocation, MuzzleFlashRotation);
-	}
+void ATShootableWeapon::StopSimulatingWeaponFire()
+{
 
-	if (FireSFX)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSFX, GetActorLocation());
-	}
+}
 
+
+void ATShootableWeapon::BurstFireFinished()
+{
+	GetWorldTimerManager().ClearTimer(TimerHandle_HandleFiring);
+	BurstFireCounter = 0;
+	TimerIntervalAdjustment = 0.0f;
 }
 
 
@@ -399,23 +395,16 @@ void ATShootableWeapon::OnRep_BurstFireCounter()
 }
 
 
-void ATShootableWeapon::StopSimulatingWeaponFire()
-{
-
-}
-
-
+/**************************************************************************/
+/* Weapon Reload */
+/**************************************************************************/
 void ATShootableWeapon::ReloadStarted()
 {
 	// Reload will complete when reload timer elapses
 	GetWorldTimerManager().SetTimer(TimerHandle_HandleReload, this, &ATShootableWeapon::HandleWeaponReload, ReloadTime, false);
 
-	if (MyPawn && MyPawn->IsLocallyControlled() && ReloadSFX)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ReloadSFX, GetActorLocation());
-	}
+	PlayWeaponReloadSFX();
 }
-
 
 
 void ATShootableWeapon::HandleWeaponReload()
@@ -438,49 +427,84 @@ void ATShootableWeapon::HandleWeaponReload()
 }
 
 
-void ATShootableWeapon::SetOwningPawn(ATPlayerTank* NewOwner)
+/**************************************************************************/
+/* Ammo */
+/**************************************************************************/
+int32 ATShootableWeapon::AddAmmo(int32 Ammount)
 {
-	if (NewOwner != MyPawn)
+	if (GetLocalRole() == ENetRole::ROLE_Authority && CurrentAmmoInCarry < MaxAmmoInCarry)
 	{
-		SetInstigator(NewOwner);
-		MyPawn = NewOwner;
-		SetOwner(NewOwner);
+		float AddedAmmoAmout = (CurrentAmmoInCarry + Ammount) > MaxAmmoInCarry ? MaxAmmoInCarry - CurrentAmmoInCarry : Ammount;
+		CurrentAmmoInCarry = FMath::Min(Ammount + CurrentAmmoInCarry, MaxAmmoInCarry);
+
+		OnAmmoAmountChange.Broadcast(CurrentAmmoInCarry, CurrentAmmoInMagazine);
+
+		return AddedAmmoAmout;
 	}
-}
 
-void ATShootableWeapon::OnEquip()
-{
-	AttachMeshToPawn();
-}
-
-void ATShootableWeapon::OnEnterInventory(ATPlayerTank* NewOwner)
-{
-	SetOwningPawn(NewOwner);
+	return 0;
 }
 
 
-FVector ATShootableWeapon::GetFirePointLocation() const
+void ATShootableWeapon::OnRep_CurrentAmmoInCarry()
 {
+	OnAmmoAmountChange.Broadcast(CurrentAmmoInCarry, CurrentAmmoInMagazine);
+}
+
+
+void ATShootableWeapon::OnRep_CurrentAmmoInMagazine()
+{
+	OnAmmoAmountChange.Broadcast(CurrentAmmoInCarry, CurrentAmmoInMagazine);
+}
+
+
+/**************************************************************************/
+/* FX */
+/**************************************************************************/
+void ATShootableWeapon::PlayWeaponFireVFX() const
+{
+
+	FVector MuzzleFlashLocation;
+	FRotator MuzzleFlashRotation;
+
 	if (FirePoint)
 	{
-		return FirePoint->GetComponentLocation();
+		MuzzleFlashLocation = FirePoint->GetComponentLocation();
+		MuzzleFlashRotation = FirePoint->GetComponentRotation();
+		if (MuzzleFlash)
+		{
+			auto compNiagara = UNiagaraFunctionLibrary::SpawnSystemAttached(MuzzleFlash, FirePoint, NAME_None, MuzzleFlashLocation, MuzzleFlashRotation, EAttachLocation::KeepWorldPosition, true);
+			compNiagara->SetOnlyOwnerSee(false);
+		}
+		else if (MuzzleFlash_Particles)
+		{
+			UGameplayStatics::SpawnEmitterAttached(MuzzleFlash_Particles, FirePoint, NAME_None, MuzzleFlashLocation, MuzzleFlashRotation, EAttachLocation::KeepWorldPosition, true);
+		}
 	}
-
-	return FVector();
 }
 
 
-FRotator ATShootableWeapon::GetFirePointRotation() const
+void ATShootableWeapon::PlayWeaponFireSFX() const
 {
-	if (FirePoint)
+	if (FireSFX)
 	{
-		return FirePoint->GetComponentRotation();
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSFX, GetActorLocation());
 	}
-
-	return FRotator();
 }
 
 
+void ATShootableWeapon::PlayWeaponReloadSFX() const
+{
+	if (MyPawn && MyPawn->IsLocallyControlled() && ReloadSFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ReloadSFX, GetActorLocation());
+	}
+}
+
+
+/**************************************************************************/
+/* Replication */
+/**************************************************************************/
 void ATShootableWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

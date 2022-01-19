@@ -11,196 +11,148 @@
 
 
 // Game Includes
-#include "Player/TBasePlayerState.h"
+#include "Player/TMultiplayerBasePlayerState.h"
 #include "Pawns/TPlayerTank.h"
-#include "GameModes/TBaseGameMode.h"
 #include "UMG/TPlayerTankMainWidget.h"
-
+#include "GameModes/TMultiplayerBaseGameMode.h"
+#include "GameStates/TMultiplayerBaseGameState.h"
+#include "../Components/THealthComponent.h"
 #include "UMG/TMultiplayerScoreBoard.h"
-#include "TEventGameStateChange.h"
 #include "Weapons/TShootableWeapon.h"
 
+
+ATBasePlayerController::ATBasePlayerController()
+{
+	bEnablePawnControl = false;
+}
+
+/**************************************************************************/
+/* Setup */
+/**************************************************************************/
 void ATBasePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Setup Widgets
-	if (IsLocalPlayerController())
-	{
-		/*if (PlayerTankMainWidgetClass)
-		{
-			PlayerHUD = CreateWidget<UTPlayerTankMainWidget>(this, PlayerTankMainWidgetClass);
-			if (PlayerHUD)
-			{
-				PlayerHUD->AddToViewport();
-				PlayerHUD->ResetMainWidget();
-			}
-		}*/
-
-		/*if (MultiplayerScoreBoardWidgetClass)
-		{
-			MultiplayerScoreBoard = CreateWidget<UTMultiplayerScoreBoard>(this, MultiplayerScoreBoardWidgetClass);
-		}*/
-	}
-
-	// Pawn control will be enabled once match starts (ClientStartMatchStartCountDownTimer)
-	SetEnablePlayerInputToPawn(bPawnControlEnabledOnStart);
+	BindToGameStateStateChangeEvents();
+	CreatePlayerHUDWidget();
+	CreateScoreWidget();
 
 	TeamId = FGenericTeamId(51);
 
-	if (GetLocalRole() == ENetRole::ROLE_Authority)
-	{
-		UGameInstance* GI = UGameplayStatics::GetGameInstance(this);
-		if (GI)
-		{
-			UTMWGlobalEventHandler* EventHandlerSubsystem = GI->GetSubsystem<UTMWGlobalEventHandler>();
-			if (EventHandlerSubsystem)
-			{
-				MyBoundEvent.BindDynamic(this, &ATBasePlayerController::OnGameStateEventReceived);
-				EventHandlerSubsystem->BindGlobalEventByClass(UTEventGameStateChange::StaticClass(), MyBoundEvent);
-			}
-		}
-
-		OnDestroyed.AddDynamic(this, &ATBasePlayerController::OnPlayerControllerDestroyed);
-	}
-
-	DamageDisplayCounter = 0;
+	bEnablePawnControl = false;
 }
 
 
+void ATBasePlayerController::BindToGameStateStateChangeEvents()
+{
+	ATMultiplayerBaseGameState* GameState = GetWorld()->GetGameState<ATMultiplayerBaseGameState>();
+	if (GameState)
+	{
+		GameState->OnGameInProgress.AddDynamic(this, &ATBasePlayerController::OnGameInProgressStateChange);
+		GameState->OnGameExitCountDown.AddDynamic(this, &ATBasePlayerController::OnGameExitCountdownStateChange);
+	}
+}
 
 
+void ATBasePlayerController::OnGameInProgressStateChange(int32 StateTimeSeconds)
+{
+	if (GetLocalRole() == ENetRole::ROLE_Authority)
+	{
+		SetControlledPawnCanTakeDamage(true);
+		bEnablePawnControl = true;
+		OnRep_EnablePawnControl();
+	}
+}
+
+
+void ATBasePlayerController::OnGameExitCountdownStateChange(int32 StateTimeSeconds)
+{
+	if (GetLocalRole() == ENetRole::ROLE_Authority)
+	{
+		SetControlledPawnCanTakeDamage(false);
+	}
+
+	if (IsLocalPlayerController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnGameExitCountdownStateChange: PC"));
+		if (MultiplayerScoreBoard)
+		{
+			MultiplayerScoreBoard->ShowScoreBoard(true);
+			MultiplayerScoreBoard->bCanToggleShowBoard = false;
+		}
+
+		if (PlayerTankMainWidget)
+		{
+			PlayerTankMainWidget->RemoveFromViewport();
+		}
+	}
+}
+
+
+void ATBasePlayerController::CreatePlayerHUDWidget()
+{
+	// Setup Widgets
+	if (IsLocalPlayerController() && PlayerTankMainWidgetClass && !PlayerTankMainWidget)
+	{
+		PlayerTankMainWidget = CreateWidget<UTPlayerTankMainWidget>(this, PlayerTankMainWidgetClass);
+		if (PlayerTankMainWidget)
+		{
+			PlayerTankMainWidget->AddToViewport();
+		}
+	}
+}
+
+
+void ATBasePlayerController::ResetPlayerTankMainWidget()
+{
+	if (!PlayerTankMainWidget)
+	{
+		CreatePlayerHUDWidget();
+	}
+
+	if (PlayerTankMainWidget && MyPlayerTank)
+	{
+		PlayerTankMainWidget->SetupForNewPlayerTankPawn(MyPlayerTank);
+	}
+}
+
+
+void ATBasePlayerController::CreateScoreWidget()
+{
+	if (IsLocalPlayerController() && MultiplayerScoreBoardWidgetClass)
+	{
+		MultiplayerScoreBoard = CreateWidget<UTMultiplayerScoreBoard>(this, MultiplayerScoreBoardWidgetClass);
+		if (MultiplayerScoreBoard)
+		{
+			MultiplayerScoreBoard->AddToViewport();
+			MultiplayerScoreBoard->ShowScoreBoard(false);
+		}
+	}
+}
+
+
+void ATBasePlayerController::BindPlayerTankPawnEvents()
+{
+	if (GetLocalRole() == ENetRole::ROLE_Authority && MyPlayerTank)
+	{
+		UTHealthComponent* PlayerTankHealthComp = MyPlayerTank->GetHealthComponent();
+		if (PlayerTankHealthComp)
+		{
+			PlayerTankHealthComp->OnHealthChange.AddDynamic(this, &ATBasePlayerController::MyPlayerTankHealthChange);
+		}
+	}
+}
+
+
+/**************************************************************************/
+/* Input */
+/**************************************************************************/
 void ATBasePlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
 	InputComponent->BindAction(TEXT("ShowScoreBoard"), EInputEvent::IE_Pressed, this, &ATBasePlayerController::OnShowScoreBoard);
 	InputComponent->BindAction(TEXT("ShowScoreBoard"), EInputEvent::IE_Released, this, &ATBasePlayerController::OnHideScoreBoard);
-}
-
-
-void ATBasePlayerController::SetEnablePlayerInputToPawn(bool bEnabled)
-{
-	APawn* MyPawn = GetPawn();
-	if (MyPawn)
-	{
-		if (bEnabled)
-		{
-			MyPawn->EnableInput(this);
-		}
-		else
-		{
-			MyPawn->DisableInput(this);
-		}
-	}
-}
-
-
-void ATBasePlayerController::OnPossess(APawn* aPawn)
-{
-	Super::OnPossess(aPawn);
-
-	ClientResetPlayerHUD();
-
-	if (IsLocalPlayerController())
-	{
-		if (PlayerTankMainWidgetClass)
-		{
-			if (PlayerHUD)
-			{
-				PlayerHUD->BeginDestroy();
-			}
-
-			PlayerHUD = CreateWidget<UTPlayerTankMainWidget>(this, PlayerTankMainWidgetClass);
-			if (PlayerHUD)
-			{
-				PlayerHUD->AddToViewport();
-				PlayerHUD->ResetMainWidget();
-			}
-		}
-
-		ATPlayerTank* LocalPlayerTank = Cast<ATPlayerTank>(aPawn);
-		if (LocalPlayerTank && PlayerHUD)
-		{
-			//PlayerHUD->SetLocalPlayerTank(LocalPlayerTank);
-		}
-	}
-
-
-}
-
-
-void ATBasePlayerController::MyPawnHealthChange(AController* DamagingController, float CurrentHealth, float HealthDelta, bool bMyPawnDied)
-{	
-	bool bHasAuthority = GetLocalRole() == ENetRole::ROLE_Authority ? true : false;
-
-	// Health Delta less then 0 are damage
-	if (bHasAuthority && HealthDelta < 0.f)
-	{
-		UpdateGameModeForPlayerDamage(DamagingController, FMath::Abs(HealthDelta), bMyPawnDied);
-	}
-
-	// Update If pawn died tell PlayerHUD to show killer
-	if (bMyPawnDied)
-	{
-		FString KillerName = "";
-		APlayerController* PC = Cast<APlayerController>(DamagingController);
-		if (PC)
-		{
-			APlayerState* PS = PC->PlayerState;
-			if (PS)
-			{
-				KillerName = PS->GetPlayerName();
-			}
-		}
-
-		if (bHasAuthority && IsLocalPlayerController())
-		{
-			//ClientUpdatePlayerHUDDeath_Implementation(KillerName);
-		}
-		else
-		{
-			//ClientUpdatePlayerHUDDeath(KillerName);
-		}
-	}
-	else
-	{
-		if (bHasAuthority && IsLocalPlayerController())
-		{
-			//ClientUpdatePlayerHUDHealth_Implementation(CurrentHealth);
-		}
-		else
-		{
-			//ClientUpdatePlayerHUDHealth(CurrentHealth);
-		}
-	}
-}
-
-
-
-
-void ATBasePlayerController::UpdateGameModeForPlayerDamage(AController* InstigatorController, float Damage, bool bMyPawnDied)
-{
-	// Update PlayerScore via GameMode
-	auto GM = GetWorld()->GetAuthGameMode();
-	if (GM)
-	{
-		auto BaseGameMode = Cast<ATBaseGameMode>(GM);
-		if (BaseGameMode)
-		{
-			BaseGameMode->AssignPlayerDamageScore(InstigatorController, this, Damage, bMyPawnDied);
-		}
-	}
-}
-
-
-
-void ATBasePlayerController::ClientResetPlayerHUD_Implementation()
-{
-	if (PlayerHUD)
-	{
-		PlayerHUD->ResetMainWidget();
-	}
 }
 
 
@@ -222,25 +174,82 @@ void ATBasePlayerController::OnHideScoreBoard()
 }
 
 
-void ATBasePlayerController::DisplayDamageCaused(AActor* DamagedActor, float Damage)
+/**************************************************************************/
+/* Damage (Health)  */
+/**************************************************************************/
+void ATBasePlayerController::MyPlayerTankHealthChange(float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* HealthChangeCauser)
 {
-	// Damage is only computed on Server
-	if (GetLocalRole() < ENetRole::ROLE_Authority)
+	if (GetLocalRole() == ENetRole::ROLE_Authority)
 	{
-		return;
-	}
+		bool MyPlayerTankDied = FMath::IsNearlyZero(Health);
+		UpdateGameModeForPlayerDamage(InstigatedBy, FMath::Abs(HealthDelta), MyPlayerTankDied);
 
-	if (!DamagedActor) return;
+		if (MyPlayerTankDied)
+		{
+			bEnablePawnControl = false;
 
-	DamageDisplay.Damage = Damage;
-	DamageDisplay.DamageCausedLocation = DamagedActor->GetActorLocation();
-	DamageDisplay.DamageCausedCounter = DamageDisplayCounter++;
-
-	if (GetLocalRole() == ENetRole::ROLE_Authority && IsLocalPlayerController())
-	{
-		OnRep_DamageDisplay();
+			FString KillerPlayerName = GetKilledByPlayerName(InstigatedBy);
+			ClientControlledPawnDied(KillerPlayerName);
+			ClientControlledPawnDied_Implementation(KillerPlayerName);
+		}
 	}
 }
+
+
+void ATBasePlayerController::UpdateGameModeForPlayerDamage(AController* InstigatorController, float Damage, bool bMyPawnDied)
+{
+	// Update PlayerScore via GameMode
+	AGameModeBase* GameModeBase = GetWorld()->GetAuthGameMode();
+	if (GameModeBase)
+	{
+		ATMultiplayerBaseGameMode* MultiplayerBaseGameMode = Cast<ATMultiplayerBaseGameMode>(GameModeBase);
+		if (MultiplayerBaseGameMode)
+		{
+			MultiplayerBaseGameMode->AssignPlayerDamageScore(InstigatorController, this, Damage, bMyPawnDied);
+		}
+	}
+}
+
+
+FString ATBasePlayerController::GetKilledByPlayerName(AController* KillerController) const
+{
+	FString KillerPlayerName = FString();
+
+	APlayerController* KillerPlayerController = Cast<APlayerController>(KillerController);
+	if (KillerPlayerController)
+	{
+		APlayerState* KillerPlayerState = KillerPlayerController->PlayerState;
+		if (KillerPlayerState)
+		{
+			KillerPlayerName = KillerPlayerState->GetPlayerName();
+		}
+	}
+
+	return KillerPlayerName;
+}
+
+
+void ATBasePlayerController::ClientControlledPawnDied_Implementation(const FString& KillerPlayerName)
+{
+	if (PlayerTankMainWidget)
+	{
+		PlayerTankMainWidget->OwningPlayerTankKilled(KillerPlayerName);
+	}
+}
+
+
+void ATBasePlayerController::SetControlledPawnCanTakeDamage(bool CanTakeDamage)
+{
+	if (GetLocalRole() == ENetRole::ROLE_Authority && MyPlayerTank)
+	{
+		UTHealthComponent* PlayerTankHealthComp = MyPlayerTank->GetHealthComponent();
+		if (PlayerTankHealthComp)
+		{
+			PlayerTankHealthComp->SetCanBeDamaged(CanTakeDamage);
+		}
+	}
+}
+
 
 void ATBasePlayerController::OnRep_DamageDisplay()
 {
@@ -248,125 +257,78 @@ void ATBasePlayerController::OnRep_DamageDisplay()
 }
 
 
-void ATBasePlayerController::OnGameStateEventReceived(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata)
+void ATBasePlayerController::DisplayDamageCaused(AActor* DamagedActor, float Damage)
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnMyCppEventReceived"));
-	
-	UTEventGameStateChange* CurrentGameState = Cast<UTEventGameStateChange>(Payload);
-	if (CurrentGameState)
+	if (DamagedActor)
 	{
-		int32 StateTime = CurrentGameState->StateTimeSeconds;
-		const FString StateMessage = CurrentGameState->StateMessage;
+		DamageDisplay.Damage = Damage;
+		DamageDisplay.DamageCausedLocation = DamagedActor->GetActorLocation();
+		++DamageDisplay.DamageCausedCounter;
 
-		switch (CurrentGameState->NewGameState)
+		if (GetLocalRole() == ENetRole::ROLE_Authority && IsLocalPlayerController())
 		{
-			case EGameInProgressState::EGINP_WaitingForInProgress:
-				UE_LOG(LogTemp, Warning, TEXT("OnGameStateEventReceived, State = EGINP_WaitingForInProgress, StateTime = %d"), CurrentGameState->StateTimeSeconds);
-
-			break;
-
-			case  EGameInProgressState::EGINP_StartPlayerDelay:
-				UE_LOG(LogTemp, Warning, TEXT("OnGameStateEventReceived, State = EGINP_StartPlayerDelay, StateTime = %d"), CurrentGameState->StateTimeSeconds);
-				ClientWaitingForPlayers(StateTime, StateMessage);
-			break;
-
-			case EGameInProgressState::EGINP_GameStartCountDown:
-				UE_LOG(LogTemp, Warning, TEXT("OnGameStateEventReceived, State = EGINP_GameStartCountDown, StateTime = %d"), CurrentGameState->StateTimeSeconds);
-				ClientStartMatchStartCountDownTimer(StateTime, StateMessage);
-			break;
-
-			case EGameInProgressState::EGINP_GameInProgress:
-				UE_LOG(LogTemp, Warning, TEXT("OnGameStateEventReceived, State = EGINP_GameInProgress, StateTime = %d"), CurrentGameState->StateTimeSeconds);
-				ClientStartMatchInProgress(StateTime, StateMessage);
-			break;
-
-			case EGameInProgressState::EGINP_GameTimeExpired:
-				UE_LOG(LogTemp, Warning, TEXT("OnGameStateEventReceived, State = EGINP_GameTimeExpired, StateTime = %d"), CurrentGameState->StateTimeSeconds);
-				ClientEndMatchInProgress(StateTime, StateMessage);
-			break;
-
-			default:
-			break;
+			OnRep_DamageDisplay();
 		}
 	}
 }
 
 
-void ATBasePlayerController::ClientWaitingForPlayers_Implementation(int32 TimeToWait, const FString& Message)
+/**************************************************************************/
+/* State  */
+/**************************************************************************/
+void ATBasePlayerController::SetEnablePawnControl(bool Enable)
 {
-	if (PlayerHUD)
+	if (MyPlayerTank)
 	{
-		PlayerHUD->SetTopStatusMessage(FText::FromString(Message));
-		PlayerHUD->ClearStatusText(false, true);
-
-		// PlayerHUD->ShowStatusText(ESelectedStatus::ESS_TopStatsTextBox, Message);
-		// PlayerHUD->ClearStatusText(ESelectedStatus::ESS_BottomStatusTextBox);
+		if (Enable)
+		{
+			MyPlayerTank->EnableInput(this);
+		}
+		else
+		{
+			MyPlayerTank->DisableInput(this);
+		}
 	}
 }
 
 
-void ATBasePlayerController::ClientStartMatchStartCountDownTimer_Implementation(int32 CountDownSeconds, const FString& Message)
+void ATBasePlayerController::OnRep_EnablePawnControl()
 {
-	if (PlayerHUD)
+	/*APawn* MyPawn = GetPawn();
+	if (!MyPawn) return;
+
+	if (bEnablePawnControl)
 	{
-		PlayerHUD->StartMatchStartCountDown(FText::FromString(Message), CountDownSeconds);
+		MyPawn->EnableInput(this);
+	}
+	else
+	{
+		MyPawn->DisableInput(this);
+	}*/
+	SetEnablePawnControl(bEnablePawnControl);
+}
+
+
+void ATBasePlayerController::AcknowledgePossession(APawn* P)
+{
+	Super::AcknowledgePossession(P);
+
+	MyPlayerTank = Cast<ATPlayerTank>(P);
+	BindPlayerTankPawnEvents();
+
+	if (IsLocalPlayerController())
+	{
+		ResetPlayerTankMainWidget();
 	}
 
-	FTimerHandle TimerHandle_EnalbeInput;
-	FTimerDelegate EnablePlayerInputDelegate = FTimerDelegate::CreateUObject(this, &ATBasePlayerController::SetEnablePlayerInputToPawn, true);
-	GetWorldTimerManager().SetTimer(TimerHandle_EnalbeInput, EnablePlayerInputDelegate, CountDownSeconds, false);
+	SetEnablePawnControl(bEnablePawnControl);
 }
 
-
-void ATBasePlayerController::ClientStartMatchInProgress_Implementation(int32 MatchDurationSeconds, const FString& Message)
-{
-	//if (PlayerHUD)
-	//{
-	//	PlayerHUD->ClearStatusText(ESelectedStatus::ESS_TopStatsTextBox);
-	//	PlayerHUD->ClearStatusText(ESelectedStatus::ESS_BottomStatusTextBox);
-
-	//	if (MatchDurationSeconds >= 0)
-	//	{
-	//		PlayerHUD->StartTimeRemainingCountDown(MatchDurationSeconds);
-	//	}
-	//	else
-	//	{
-	//		// TODO: Hide Time
-	//	}
-	//}
-
-	SetEnablePlayerInputToPawn(true);
-}
-
-
-void ATBasePlayerController::ClientEndMatchInProgress_Implementation(int32 TimeLeftTillTravelSeconds, const FString& Message)
-{
-	if (MultiplayerScoreBoard)
-	{
-		MultiplayerScoreBoard->ShowScoreBoard(true);
-		MultiplayerScoreBoard->bCanToggleShowBoard = false;
-		MultiplayerScoreBoard->SetScoreBoardTitleText(TEXT("Final Score"));
-	}
-}
-
-
-void ATBasePlayerController::OnPlayerControllerDestroyed(AActor* Actor)
-{
-	
-
-}
-
-FGenericTeamId ATBasePlayerController::GetGenericTeamId() const
-{
-	return TeamId;
-}
 
 void ATBasePlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-
 	DOREPLIFETIME_CONDITION(ATBasePlayerController, DamageDisplay, COND_OwnerOnly);
-
-
+	DOREPLIFETIME_CONDITION(ATBasePlayerController, bEnablePawnControl, COND_OwnerOnly);
 }

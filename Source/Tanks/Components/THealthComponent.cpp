@@ -3,17 +3,21 @@
 
 #include "THealthComponent.h"
 
-#include "Net/UnrealNetwork.h"
-#include "Kismet/GameplayStatics.h"
 
-#include "Player/TBasePlayerController.h"
+// Engine Includes
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
+
+
+// Game Includes
 #include "TDisplayCausedDamageInterface.h"
-#include "GameModes/TBaseGameMode.h"
+
 
 // Sets default values for this component's properties
 UTHealthComponent::UTHealthComponent()
 {
 	DefaultHealth = 100;
+	Health = DefaultHealth;
 }
 
 
@@ -29,90 +33,93 @@ void UTHealthComponent::BeginPlay()
 		{
 			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UTHealthComponent::HandleTakeAnyDamage);
 		}
-
-		UGameInstance* GI = UGameplayStatics::GetGameInstance(this);
-		if (GI)
-		{
-			UTMWGlobalEventHandler* EventHandlerSubsystem = GI->GetSubsystem<UTMWGlobalEventHandler>();
-			if (EventHandlerSubsystem)
-			{
-				BoundGameStateChangedEvent.BindDynamic(this, &UTHealthComponent::OnGameStateEventReceived);
-				EventHandlerSubsystem->BindGlobalEventByClass(UTEventGameStateChange::StaticClass(), BoundGameStateChangedEvent);
-			}
-		}
-
 	}
 
-	Health = DefaultHealth;
-
-
+	bCanBeDamaged = true;
+	bIsInvincible = false;
 }
 
 
 void UTHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (Damage <= 0 || !bCanBeDamaged || bIsInvincible) return;
-
-	// Do not do more damage than Health
-	float DamageAmount = (Damage > Health) ? Health + 1 : Damage;
-
-	if (InstigatedBy)
+	if (Damage > 0 && bCanBeDamaged && !bIsInvincible)
 	{
-		auto DisplayDamageInterface = Cast<ITDisplayCausedDamageInterface>(InstigatedBy);
+		// Check for self damage. Self damage is not allowed
+		if (InstigatedBy)
+		{
+			APawn* InstigatorPawn = InstigatedBy->GetPawn();
+			if (InstigatorPawn && InstigatorPawn == DamagedActor)
+			{
+				return;
+			}
+		}
+		
+		// Do not do more damage than Health
+		float DamageAmount = (Damage > Health) ? Health + 1 : Damage;
+
+		AlertDamageToDisplayCausedDamageInterfaceController(InstigatedBy, DamagedActor, DamageAmount);
+
+		// Clamp Health so it stays between starting health and 0
+		Health = FMath::Clamp(Health - Damage, 0.0f, DefaultHealth);
+
+		OnHealthChange.Broadcast(Health, -DamageAmount, DamageType, InstigatedBy, DamageCauser);
+	}	
+}
+
+
+void UTHealthComponent::AlertDamageToDisplayCausedDamageInterfaceController(AController* DamageCausingController, AActor* DamagedActor, float DamageAmount) const
+{
+	if (DamageCausingController)
+	{
+		ITDisplayCausedDamageInterface* DisplayDamageInterface = Cast<ITDisplayCausedDamageInterface>(DamageCausingController);
 		if (DisplayDamageInterface)
 		{
 			DisplayDamageInterface->DisplayDamageCaused(DamagedActor, DamageAmount);
 		}
-
-		// Do not damage yourself
-		auto InstigatorPawn = InstigatedBy->GetPawn();
-		if (InstigatorPawn && InstigatorPawn == DamagedActor)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Unable to damage yourself, damage pervented"));
-			return;
-		}
 	}
-	
-	
-	// Clamp Health so it stays between starting health and 0
-	Health = FMath::Clamp(Health - Damage, 0.0f, DefaultHealth);
-
-	OnHealthChange.Broadcast(this, Health, -DamageAmount, DamageType, InstigatedBy, DamageCauser);
 }
 
 
-void UTHealthComponent::AddHealth(float Amount)
+void UTHealthComponent::OnRep_Health()
 {
-	if (Amount <= 0 || Health <= 0.0f || Health >= DefaultHealth) return;
-	
-	// Only Heal up to default health
-	float HealAmount = (Health + Amount > DefaultHealth) ? (DefaultHealth - Health) : Amount;
-
-	// New Health can not be more than DefaultHealth (should be equivalent to Health + HealAmount)
-	Health = FMath::Min(Health + Amount, DefaultHealth);
-
-	OnHealthChange.Broadcast(this, Health, HealAmount, nullptr, nullptr, nullptr);
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_Health"));
+	OnHealthChange.Broadcast(Health, 0, nullptr, nullptr, nullptr);
 }
 
 
-void UTHealthComponent::AddApplyDamageInGameState(EGameInProgressState State)
+float UTHealthComponent::AddHealth(float Amount)
 {
-	if (!ApplyDamageInGameStates.Contains(State))
+	if (Amount > 0.f && GetOwnerRole() == ENetRole::ROLE_Authority && Health < DefaultHealth)
 	{
-		ApplyDamageInGameStates.Add(State);
+		// Only Heal up to default health
+		float HealAmount = (Health + Amount > DefaultHealth) ? (DefaultHealth - Health) : Amount;
+
+		// New Health can not be more than DefaultHealth (should be equivalent to Health + HealAmount)
+		Health = FMath::Min(Health + Amount, DefaultHealth);
+
+		OnHealthChange.Broadcast(Health, HealAmount, nullptr, nullptr, nullptr);
+
+		return HealAmount;
+	}
+
+	return 0.f;
+}
+
+
+void UTHealthComponent::SetCanBeDamaged(bool CanBeDamaged)
+{
+	if (GetOwnerRole() == ENetRole::ROLE_Authority)
+	{
+		bCanBeDamaged = CanBeDamaged;
 	}
 }
 
 
-void UTHealthComponent::OnGameStateEventReceived(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata)
+void UTHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	if (Payload)
-	{
-		UTEventGameStateChange* CurrentGameState = Cast<UTEventGameStateChange>(Payload);
-		if (CurrentGameState)
-		{
-			bCanBeDamaged = ApplyDamageInGameStates.Contains(CurrentGameState->NewGameState);
-		}
-	}
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+
+	DOREPLIFETIME_CONDITION(UTHealthComponent, Health, COND_OwnerOnly);
 }
 

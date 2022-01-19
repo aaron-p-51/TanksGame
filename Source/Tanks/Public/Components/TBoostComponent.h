@@ -81,7 +81,10 @@ public:
 	void ServerStopUseBoost();
 
 	/** Get the current amount of Boost */
-	FORCEINLINE float GetBoost() const {return Boost;}
+	FORCEINLINE float GetBoost() const { return Boost; }
+
+	/** Get the max amount of boost possible */
+	FORCEINLINE float GetMaxBoost() const { return MaxBoost; }
 
 	
 

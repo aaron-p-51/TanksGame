@@ -3,109 +3,63 @@
 
 #include "Items/TItemDropZone.h"
 
-// Engine Includes
-#include "Components/BoxComponent.h"
-#include "Kismet/GameplayStatics.h"
 
-// Game Includes
-#include "Items/TAirDropItem.h"
-
-//// Sets default values
+// Sets default values
 ATItemDropZone::ATItemDropZone()
 {
-	BoxCollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollisionComp"));
-	if (BoxCollisionComponent)
-	{
-		SetRootComponent(BoxCollisionComponent);
-
-		// We only want DropZone to collide with ATAirDropItem
-		BoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		BoxCollisionComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		BoxCollisionComponent->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
-
-		BoxCollisionComponent->SetBoxExtent(FVector(100.f, 100.f, 32.f));
-	}
-
 	ItemPickupSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ItemPickupSpawnPoint"));
-	if (ItemPickupSpawnPoint)
-	{
-		ItemPickupSpawnPoint->SetupAttachment(GetRootComponent());
-	}
+	ItemPickupSpawnPoint->SetupAttachment(GetRootComponent());
+	
 
 	CurrentPickupItemInDropZone = nullptr;
 }
 
 
-// Called when the game starts or when spawned
-void ATItemDropZone::BeginPlay()
+void ATItemDropZone::SetCurrentPickupItemInDropZone(AActor* Actor)
 {
-	Super::BeginPlay();
+#if WITH_EDITOR
 
-	if (BoxCollisionComponent && GetLocalRole() == ENetRole::ROLE_Authority)
+	if (CurrentPickupItemInDropZone)
 	{
-		BoxCollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ATItemDropZone::OnBoxCollisionComponentBeginOverlap);
+		UE_LOG(LogTemp, Error, TEXT("%s : Attempting to set CurrentPickupItemInDropZone. Already valid"), *GetName());
 	}
+
+#endif
+
+	CurrentPickupItemInDropZone = Actor;
 }
-
-
-EItemDropZoneState ATItemDropZone::GetItemDropZoneState()
-{
-	// Update state if item has been picked up
-	if (ItemDropZoneState == EItemDropZoneState::EIDZS_ItemInDropZone)
-	{
-		if (CurrentPickupItemInDropZone == nullptr)
-		{
-			return EItemDropZoneState::EIDZS_Empty;
-		}
-		else
-		{
-			return EItemDropZoneState::EIDZS_ItemInDropZone;
-		}
-	}
-	else
-	{
-		return ItemDropZoneState;
-	}
-}
-
 
 void ATItemDropZone::SetItemDropZoneState(EItemDropZoneState NewState)
 {
+	
+#if WITH_EDITOR
+
+	if (NewState == EItemDropZoneState::EIDZS_Empty && CurrentPickupItemInDropZone)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s : Attempting to set state to EIDZS_Empty but CurrentPickupItemInDropZone is still valid!"), *GetName());
+	}
+	else if (NewState == EItemDropZoneState::EIDZS_ItemInbound && CurrentPickupItemInDropZone)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s : Attempting to set state to EIDZS_ItemInbound but CurrentPickupItemInDropZone is still valid!"), *GetName());
+	}
+	else if (NewState == EItemDropZoneState::EIDZS_ItemInDropZone && !CurrentPickupItemInDropZone)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s : Attempting to set state to EIDZS_ItemInDropZone but CurrentPickupItemInDropZone is not valid!"), *GetName());
+	}
+
+#endif
+
 	ItemDropZoneState = NewState;
 }
 
 
-void ATItemDropZone::OnBoxCollisionComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+FVector ATItemDropZone::GetItemPickupSpawnPoint() const
 {
-	if (!OtherActor) return;
-
-	auto AirDropItem = Cast<ATAirDropItem>(OtherActor);
-	if (AirDropItem)
+	if (ItemPickupSpawnPoint)
 	{
-		AirDropItem->bShouldDisappear = true;
-
-		if (PickupIcon)
-		{
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(GetActorLocation());
-
-			// Apply Spawn Location offset
-			if (ItemPickupSpawnPoint)
-			{
-				SpawnTransform.SetLocation(SpawnTransform.GetLocation() + ItemPickupSpawnPoint->GetRelativeLocation());
-			}
-
-			AActor* ItemToSpawn = UGameplayStatics::BeginDeferredActorSpawnFromClass(GetWorld(), PickupIcon, SpawnTransform, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
-			if (ItemToSpawn)
-			{
-				CurrentPickupItemInDropZone = ItemToSpawn;
-				SetItemDropZoneState(EItemDropZoneState::EIDZS_ItemInDropZone);
-
-				UGameplayStatics::FinishSpawningActor(ItemToSpawn, SpawnTransform);
-			}
-		}
+		return ItemPickupSpawnPoint->GetComponentLocation();
 	}
+
+	return GetActorLocation();
 }
-
-
 

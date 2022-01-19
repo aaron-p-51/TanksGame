@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TTanksTypes.h"
 #include "GameFramework/Actor.h"
 #include "TItemDropZone.generated.h"
 
-
+class ATPickupItem;
 class UBoxComponent;
+class ATAirItemSpawner;
 
 /**
  * States of Items in DropZone:
@@ -30,59 +32,52 @@ enum class EItemDropZoneState : uint8
 };
 
 
+/**
+ * Base class for Item Drop Zones.
+ */
 UCLASS()
 class TANKS_API ATItemDropZone : public AActor
 {
 	GENERATED_BODY()
 
+
 /**
  * Members
  */
 
-protected:
-
-	/** Current state */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
-	EItemDropZoneState ItemDropZoneState;
-
-	/** Actor to spawn when ATAirDropItem collides with this DropZone */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-	TSubclassOf<AActor> PickupIcon;
-
-	/** Collision to detect ATAirDropItem */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	UBoxComponent* BoxCollisionComponent;
+private:
 
 	/** Offset to spawn PickupIcon */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(EditAnywhere, Category = "Item")
 	USceneComponent* ItemPickupSpawnPoint;
 
-	/** Current Pickup in DropZone, should be of type PickupIcon */
+	/** Current state */
+	UPROPERTY(VisibleAnywhere, Category = "Item")
+	EItemDropZoneState ItemDropZoneState;
+
+	/** Current PickupItem in DropZone. */
 	UPROPERTY(VisibleAnywhere)
 	AActor* CurrentPickupItemInDropZone;
+
 
  /**
   * Methods
   */
 	
 public:	
-	//// Sets default values for this actor's properties
+	
+	// Sets default values for this actor's properties
 	ATItemDropZone();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-	/** [Server] Collision of ATAirDropItem will spawn PickupIcon, with ItemPickupSpawnPoint offset */
-	UFUNCTION()
-	void OnBoxCollisionComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-
-public:	
-
-	/** Get the curret DropZoneState, will update and check for valid CurrentPickupItemInDropZone */
-	EItemDropZoneState GetItemDropZoneState();
-
-	/** Set current State */
+	/** Getter and setter CurrentPickupItemInDropZone */
+	void SetCurrentPickupItemInDropZone(AActor* Actor);
+	AActor* GetCurrentPickupItemInDropZone() const { return CurrentPickupItemInDropZone; }
+	
+	/** Getter and setter for CurrentPickupItemInDropZone */
+	EItemDropZoneState GetItemDropZoneState() const { return ItemDropZoneState; }
 	void SetItemDropZoneState(EItemDropZoneState NewState);
+
+	/** Get the ItemPickupSpawnPoint location in world space */
+	FVector GetItemPickupSpawnPoint() const;
 
 };

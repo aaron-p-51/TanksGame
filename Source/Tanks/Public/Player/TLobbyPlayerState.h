@@ -36,6 +36,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerSetVoteToStart(bool Value);
 
-	bool GetVoteToStart() const { return bVoteToStart; }
+	FORCEINLINE bool GetVoteToStart() const { return bVoteToStart; }
 
 };

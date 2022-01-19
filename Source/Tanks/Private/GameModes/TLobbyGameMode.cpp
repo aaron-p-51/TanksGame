@@ -33,23 +33,24 @@ void ATLobbyGameMode::PreInitializeComponents()
 
 void ATLobbyGameMode::DefaultTick()
 {
-	// Get the current game state
 	ATLobbyGameState* LobbyGameState = GetGameState<ATLobbyGameState>();
-	if (!LobbyGameState) return;
-	FLobbyData CurrentLobbyData = LobbyGameState->GetLobbyData();
-
-	if (CurrentLobbyData.bIsMatchStarting)
+	if (LobbyGameState)
 	{
-		// Match start criteria has been meet. CurrentLobbyData is passed as reference and will be modified by ProcessLoadNextMap
-		ProcessLoadNextMap(CurrentLobbyData);
-	}
-	else
-	{
-		// Update Lobby data based on current session info. CurrentLobbyData is passed as reference and will be modified by ProcessLoadNextMap
-		UpdateLobbyData(CurrentLobbyData);
-	}
+		FLobbyData CurrentLobbyData = LobbyGameState->GetLobbyData();
 
-	LobbyGameState->SetLobbyData(CurrentLobbyData);
+		if (CurrentLobbyData.bIsMatchStarting)
+		{
+			// Match start criteria has been meet. CurrentLobbyData is passed as reference and will be modified by ProcessLoadNextMap
+			ProcessLoadNextMap(CurrentLobbyData);
+		}
+		else
+		{
+			// Update Lobby data based on current session info. CurrentLobbyData is passed as reference and will be modified by ProcessLoadNextMap
+			UpdateLobbyData(CurrentLobbyData);
+		}
+
+		LobbyGameState->SetLobbyData(CurrentLobbyData);
+	}
 }
 
 
@@ -58,7 +59,6 @@ void ATLobbyGameMode::ProcessLoadNextMap(FLobbyData& LobbyData)
 	--WaitTimeAfterIsReadyToStart;
 	LobbyData.TimeTillMatchStart = WaitTimeAfterIsReadyToStart;
 
-	// Load the next max when WaitTimeAfterIsReadyToStart elapses
 	if (WaitTimeAfterIsReadyToStart <= 0.f)
 	{
 		LoadNextMap();
@@ -105,8 +105,13 @@ FString ATLobbyGameMode::GetSessionServerName(FNamedOnlineSession* NamedOnlineSe
 
 int32 ATLobbyGameMode::GetSessionMaxPlayers(FNamedOnlineSession* NamedOnlineSession) const
 {
-	if (!NamedOnlineSession) return -1;
-	return NamedOnlineSession->SessionSettings.NumPublicConnections;
+	int32 SessionMaxPlayers = -1;
+	if (NamedOnlineSession)
+	{
+		SessionMaxPlayers = NamedOnlineSession->SessionSettings.NumPublicConnections;
+	}
+
+	return SessionMaxPlayers;
 }
 
 
@@ -157,9 +162,9 @@ bool ATLobbyGameMode::IsReadyToStart(const int32 VotesToStart, const int32 MaxPl
 void ATLobbyGameMode::LoadNextMap()
 {
 	UWorld* World = GetWorld();
-	if (!World) return;
-
-	bUseSeamlessTravel = true;
-
-	World->ServerTravel("/Game/Tanks/Map/Map_WW2_Test?listen");
+	if (World)
+	{
+		bUseSeamlessTravel = true;
+		World->ServerTravel("/Game/Tanks/Map/Map_WW2_Test?listen");
+	}
 }

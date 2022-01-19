@@ -32,7 +32,7 @@ void UTSessionSubsystem::CreateSession(int32 NumPublicConnections, FString Serve
 
 	// Set settings for new session. As needed these settings should be set by the player via user interface.
 	LastSessionSettings = MakeShareable(new FOnlineSessionSettings());
-	LastSessionSettings->NumPrivateConnections = 0;
+	//LastSessionSettings->NumPrivateConnections = 0;
 	LastSessionSettings->NumPublicConnections = NumPublicConnections;
 	LastSessionSettings->bAllowInvites = true;
 	LastSessionSettings->bAllowJoinInProgress = true;
@@ -44,13 +44,13 @@ void UTSessionSubsystem::CreateSession(int32 NumPublicConnections, FString Serve
 
 	// If using the NULL subsystem then set IsLabMatch to true
 	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
-	if (OnlineSub && OnlineSub->GetSubsystemName() != "NULL")
+	if (OnlineSub && OnlineSub->GetSubsystemName() == "NULL")
 	{
-		LastSessionSettings->bIsLANMatch = false;
+		LastSessionSettings->bIsLANMatch = true;
 	}
 	else
 	{
-		LastSessionSettings->bIsLANMatch = true;
+		LastSessionSettings->bIsLANMatch = false;
 	}
 
 	// Set key value pair for server name

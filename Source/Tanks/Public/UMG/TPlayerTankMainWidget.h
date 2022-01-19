@@ -27,6 +27,52 @@ class TANKS_API UTPlayerTankMainWidget : public UUserWidget
 /**
  * Members
  */
+private:
+
+	/**************************************************************************/
+	/* Player */
+	/**************************************************************************/
+
+	UPROPERTY(VisibleAnywhere)
+	ATPlayerTank* OwningPlayerTank;
+
+	UPROPERTY()
+	ATShootableWeapon* CurrentPlayerTankShootableWeapon;
+
+
+	/**************************************************************************/
+	/* Health */
+	/**************************************************************************/
+
+	UPROPERTY(EditDefaultsOnly)
+	FLinearColor HealBarFillColor;
+
+	UPROPERTY(EditDefaultsOnly)
+	FLinearColor LowHealthFillColor;
+
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMax = "1.0", ClampMin = "0.0", UIMin = "0.0", UIMax = "1.0"))
+	float MinHealthThreshold;
+
+	float MaxHealthValue;
+
+
+	/**************************************************************************/
+	/* Boost */
+	/**************************************************************************/
+
+	float MaxBoostValue;
+
+
+	/**************************************************************************/
+	/* Timers */
+	/**************************************************************************/
+
+	FTimerHandle GameStartCoutDownTimer_TimerHandle;
+	int32 GameStartCoutDownSeconds;
+
+	FTimerHandle MatchInProgressCountDownTimer_TimeHandle;
+	int32 MatchInProgressCountDownSeconds;
+	
 	
 protected:
 
@@ -50,6 +96,9 @@ protected:
 	UTextBlock* BottomStatusTextBlock;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UTextBlock* MatchTimeText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UProgressBar* HealthProgressBar;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -67,128 +116,121 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* AmmoInCarry;
 
-	/**************************************************************************/
-	/* Health */
-	/**************************************************************************/
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FLinearColor HealBarFillColor;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FLinearColor LowHealthFillColor;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMax = "1.0", ClampMin = "0.0", UIMin = "0.0", UIMax = "1.0"))
-	float MinHealthThreshold;
-
-	float MaxHealthValue;
-
-	/**************************************************************************/
-	/* Boost */
-	/**************************************************************************/
-
-	float MaxBoostValue;
-
-
-
-
-
-
-
-	UPROPERTY(BlueprintReadWrite)
-	ATPlayerTank* OwningPlayerTank;
-
-	
-
-	int32 CurrentCountDownTimer;
-
-	//int32 CountDownTimerDuration;
-
-	FTimerHandle CoutDownTimerHandle;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UTextBlock* PlayerKillerName;
 
 
  /**
   * Methods
   */
+private:
+
+	void SetupHeathCompBinding();
+	void SetupBoostCompBinding();
+	void SetupPlayerTankShootableWeaponBinding();
+
+	void SetupHealthUI();
+	void SetupBoostUI();
+	void SetupShootableWeaponUI();
 
 
-protected:
 
-	
+	UFUNCTION()
+	void OnStartPlayerDelayStateChange(int32 StateTimeSeconds);
+	UFUNCTION()
+	void OnGameStartCountDownStateChange(int32 StateTimeSeconds);
+	UFUNCTION()
+	void OnGameInProgressStateChange(int32 StateTimeSeconds);
+	UFUNCTION()
+	void OnGameExitCountDownStateChange(int32 StateTimeSeconds);
+
+
+	UFUNCTION()
+	void StartMatchInProgressCountDown(int32 CountDownSeconds);
+
+	UFUNCTION()
+	void StartGameStartCountDown(int32 CountDownSeconds);
+
+	UFUNCTION()
+	void SetTopStatusMessage(const FString& Message);
+
+	UFUNCTION()
+	void SetBottomStatusMessage(const FText Message);
+
+	UFUNCTION()
+	void ClearStatusText(bool ClearTop = true, bool ClearBottom = true);
+
+	ATPlayerTank* GetOwningPlayerTank() const;
+
+	void ShowAllPlayerDataWidggets(bool Enable);
 
 public:
 
 
- virtual bool Initialize() override;
 
-  UFUNCTION()
-  void ResetMainWidget();
+	void SetupForNewPlayerTankPawn(ATPlayerTank* PlayerTank);
 
-  UFUNCTION(BlueprintCallable)
-  void SetNewHealthValue(float Value);
+	virtual bool Initialize() override;
 
-  UFUNCTION(BlueprintCallable)
-  void SetNewBoostValue(float Value);
-
-  UFUNCTION(BlueprintCallable)
-  void SetWeaponIcons(ATShootableWeapon* Weapon);
-
-  UFUNCTION(BlueprintCallable)
-  void UpdateAmmoDisplay(int32 CarryCount, int32 MagazineCount);
-
-  UFUNCTION(BlueprintCallable)
-  void UpdateWeaponChange(ATShootableWeapon* Weapon);
+	//UFUNCTION()
+	//void ResetMainWidget();
 
 
+	UFUNCTION(BlueprintCallable)
+	void SetNewHealthValue(float Value);
 
-  UFUNCTION()
-  void SetTopStatusMessage(const FText Message);
+	UFUNCTION(BlueprintCallable)
+	void SetNewBoostValue(float Value);
 
-  UFUNCTION()
-  void SetBottomStatusMessage(const FText Message);
+	UFUNCTION(BlueprintCallable)
+	void SetWeaponIcons(ATShootableWeapon* Weapon);
 
-  UFUNCTION()
-  void ClearStatusText(bool ClearTop, bool ClearBottom);
+	UFUNCTION(BlueprintCallable)
+	void UpdateAmmoDisplay(int32 CurrentAmmoInCarry, int32 CurrentAmmoInMagazine);
 
-  UFUNCTION()
-  void StartMatchStartCountDown(const FText Message, int32 CountDownSeconds);
+
+
+	UFUNCTION()
+	void OnOwningPlayerTankHealthChange(/*class UTHealthComponent* HealthComp,*/ float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* HealthChangeCauser);
+
+	UFUNCTION()
+	void OnOwningPlayerBoostChange(float Boost, bool UsingBoost);
+
+	UFUNCTION()
+	void OnOwningPlayerShootableWeaponChange(ATShootableWeapon* Weapon);
+
+	UFUNCTION()
+	void OnCurrentPlayerTankShootableWeaponAmmoChange(int32 CurrentAmmoInCarry, int32 CurrentAmmoInMagazine);
+
+	void OwningPlayerTankKilled(const FString& KillerPlayerName);
 
 protected:
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void BP_ResetHealthBar();
+	void UpdateMatchInProgressText();
 
+	UFUNCTION()
+	void MatchInProgressTick();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void BP_Delay();
+
+	void RemovePlayerPawnBinding();
+
+	/*void SetGameStateBinding();*/
 	
+	UFUNCTION()
+	void GameStartCoutDownTick();
+
+	void UpdateGameStartText();
+
 	void ResetHealthBar();
 
+
+
 	UFUNCTION(BlueprintImplementableEvent)
-	void BP_SetupComponentBinding();
+	void BP_SetWeaponIconImage(ATShootableWeapon* Weapon);
 
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_SetNewHealthFillPercent(float Value);
+	UFUNCTION(BlueprintCallable)
+	void BindToGameStateStateChangeEvents();
 
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_SetTopStatusMessage(const FText& Message);
-
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_SetBottomStatusMessage(const FText& Message);
-
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_ClearBottomStatusMessage();
-
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_ClearTopStatusMessage();
-
-  UFUNCTION(BlueprintImplementableEvent)
-  void BP_StartCountDownTimer();
-
-
-  ATPlayerTank* GetOwningPlayerTank() const;
-
-  void CountDownTimerTick();
-
-
-
- 
-
-	
 };

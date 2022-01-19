@@ -3,9 +3,10 @@
 
 #include "Items/TAirDropItem.h"
 
-#include "Components/StaticMeshComponent.h"
-#include "Components/SphereComponent.h"
-#include "Net/UnrealNetwork.h"
+
+// Game Includes
+#include "Items/TAirItemSpawner.h"
+
 
 // Sets default values
 ATAirDropItem::ATAirDropItem()
@@ -13,18 +14,8 @@ ATAirDropItem::ATAirDropItem()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
-	if (CollisionComponent)
-	{
-		SetRootComponent(CollisionComponent);
-		CollisionComponent->SetMobility(EComponentMobility::Movable);
-	}
-
-	FallSpeed = 1000.f;
-	bShouldDisappear = false;
 	ScaleRateChange = 1.f;
 	SetReplicates(true);
-	SetReplicateMovement(false);
 }
 
 
@@ -33,29 +24,31 @@ void ATAirDropItem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!bShouldDisappear)
-	{	
-		// Fall to drop Zone
-		SetActorLocation(FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaTime, FallSpeed));
-	}
-	else
+	if (TransportTravelData.bSpawnerDataSet && !bEnableMovement)
 	{
-		float SizeChangeThisFrame = DeltaTime * ScaleRateChange;
-		SetActorScale3D(GetActorScale3D() - SizeChangeThisFrame);
-
-		if (GetActorScale3D().X < 0.f)
-		{
-			Destroy();
-		}
+		ShrinkAndDestroyActor(DeltaTime);
 	}
 }
 
 
-void ATAirDropItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void ATAirDropItem::ShrinkAndDestroyActor(float DeltaTime)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	float SizeChangeThisFrame = DeltaTime * ScaleRateChange;
+	SetActorScale3D(GetActorScale3D() - SizeChangeThisFrame);
 
-	DOREPLIFETIME(ATAirDropItem, TargetLocation);
-	DOREPLIFETIME(ATAirDropItem, bShouldDisappear);
+	if (GetLocalRole() == ENetRole::ROLE_Authority && GetActorScale3D().X < 0.1f)
+	{
+		Destroy();
+	}
 }
 
+
+void ATAirDropItem::OnReachedTravelTransportDestination()
+{
+	if (AirItemSpawner && GetLocalRole() == ENetRole::ROLE_Authority)
+	{
+		AirItemSpawner->OnAirDropItemReachDropZone(this);
+	}
+
+	bEnableMovement = false;
+}

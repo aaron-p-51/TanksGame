@@ -3,16 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "Items/TAirItemSpawnerTransport.h"
 #include "TAirDropItem.generated.h"
 
 
-class UStaticMeshComponent;
-class USphereComponent;
-
-
+/**
+ * Base for ATAirItemSpawner to transport items
+ */
 UCLASS()
-class TANKS_API ATAirDropItem : public AActor
+class TANKS_API ATAirDropItem : public ATAirItemSpawnerTransport
 {
 	GENERATED_BODY()
 	
@@ -20,30 +19,12 @@ class TANKS_API ATAirDropItem : public AActor
  * Members
  */
 
-protected:
+private:
 
-	/** Collision for AirDropItem */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
-	USphereComponent* CollisionComponent;
-
-	/** Rate for actor is start disappearing (shrink) */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AirDropItem")
+	/** Rate for actor is start disappearing (shrink). */
+	UPROPERTY(EditDefaultsOnly, Category = "Configuration")
 	float ScaleRateChange;
 
-	/** Fall Speed */
-	UPROPERTY(EditDefaultsOnly,  BlueprintReadOnly, Category = "AirDropItem")
-	float FallSpeed;
-
-
-public:
-
-	/** Location to travel to */
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = "AirDropItem")
-	FVector TargetLocation;
-
-	/** Should actor start disappear, will destroy after scale < 0 */
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "AirDropItem")
-	bool bShouldDisappear;
 
  /**
   * Methods
@@ -57,4 +38,17 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+protected:
+
+	/**
+	 * [Server + Client] When this actor reaches its travel destination, ie OnReachedTravelTransportDestination is called.
+	 * Begin to shrink this actors scale. When scale reaches 0.1f, destroy actor.
+	 */
+	void ShrinkAndDestroyActor(float DeltaTime);
+
+	/**
+	 * [Server + Client] Called when this actor CurrentTravelDistance exceeds distance to transport destination set in TransportTravelData.DistanceToTransportDestination. See parent class
+	 * Alert AirItemSpawner this actor reached its target location
+	 */
+	virtual void OnReachedTravelTransportDestination() override;
 };
